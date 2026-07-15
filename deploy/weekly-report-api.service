@@ -1,0 +1,15 @@
+[Unit]
+Description=Weekly Report API
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=weekly-report
+WorkingDirectory=/opt/weekly-report/server
+EnvironmentFile=/opt/weekly-report/server/.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

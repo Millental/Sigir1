@@ -1,0 +1,29 @@
+# Пример виртуального хоста nginx.
+# Скопируйте в /etc/nginx/sites-available/weekly-report, поправьте домен/пути,
+# затем: ln -s .../sites-available/weekly-report /etc/nginx/sites-enabled/ && nginx -t && systemctl reload nginx
+
+server {
+    listen 80;
+    server_name weekly-report.internal.example;  # замените на реальный внутренний домен/IP
+
+    # Собранный клиент (npm run build в client/ -> папка dist)
+    root /opt/weekly-report/client/dist;
+    index index.html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:4000/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cookie_path / /;
+    }
+}
+
+# Рекомендуется добавить HTTPS (например, через внутренний CA компании или certbot),
+# т.к. данные чувствительны (см. SRS п.4.2). В этом примере HTTPS не настроен —
+# уточните у ИТ-отдела принятый в компании способ выпуска сертификатов.

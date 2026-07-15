@@ -1,0 +1,151 @@
+// Схема соответствует укрупнённой модели данных из SRS (раздел 6.1).
+// В Этапе 1 реально используется только User + AuditLogEntry (аутентификация).
+// Остальные модели зафиксированы заранее, чтобы не переделывать миграции на Этапах 2-9.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  SPEAKER
+}
+
+enum SlideStatus {
+  DRAFT
+  SUBMITTED
+  NEEDS_REVISION
+  IN_PRESENTATION
+}
+
+enum WeeklyCycleStatus {
+  COLLECTING
+  ASSEMBLED
+  ARCHIVED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  fullName     String
+  login        String   @unique
+  passwordHash String
+  role         UserRole @default(SPEAKER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  templates    Template[]      @relation("TemplateOwner")
+  slides       Slide[]
+  auditEntries AuditLogEntry[]
+}
+
+model Template {
+  id        String   @id @default(uuid())
+  name      String
+  isShared  Boolean  @default(false)
+  version   Int      @default(1)
+  createdBy String?
+  owner     User?    @relation("TemplateOwner", fields: [createdBy], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fields TemplateField[]
+  slides Slide[]
+}
+
+model TemplateField {
+  id         String   @id @default(uuid())
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  label      String
+  isRequired Boolean  @default(false)
+  order      Int      @default(0)
+
+  values SlideFieldValue[]
+}
+
+model WeeklyCycle {
+  id        String            @id @default(uuid())
+  weekLabel String
+  startDate DateTime
+  endDate   DateTime
+  status    WeeklyCycleStatus @default(COLLECTING)
+
+  slides       Slide[]
+  presentation Presentation?
+}
+
+model Slide {
+  id            String      @id @default(uuid())
+  weeklyCycleId String
+  weeklyCycle   WeeklyCycle @relation(fields: [weeklyCycleId], references: [id])
+  ownerId       String
+  owner         User        @relation(fields: [ownerId], references: [id])
+  templateId    String
+  template      Template    @relation(fields: [templateId], references: [id])
+  status        SlideStatus @default(DRAFT)
+  reviewComment String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  fieldValues       SlideFieldValue[]
+  presentationSlide PresentationSlide?
+}
+
+model SlideFieldValue {
+  id              String        @id @default(uuid())
+  slideId         String
+  slide           Slide         @relation(fields: [slideId], references: [id], onDelete: Cascade)
+  templateFieldId String
+  templateField   TemplateField @relation(fields: [templateFieldId], references: [id])
+  value           String        @default("")
+
+  history FieldValueHistory[]
+
+  @@unique([slideId, templateFieldId])
+}
+
+model FieldValueHistory {
+  id                String          @id @default(uuid())
+  slideFieldValueId String
+  slideFieldValue   SlideFieldValue @relation(fields: [slideFieldValueId], references: [id], onDelete: Cascade)
+  oldValue          String
+  newValue          String
+  changedBy         String
+  changedAt         DateTime        @default(now())
+}
+
+model Presentation {
+  id            String      @id @default(uuid())
+  weeklyCycleId String      @unique
+  weeklyCycle   WeeklyCycle @relation(fields: [weeklyCycleId], references: [id])
+  assembledAt   DateTime    @default(now())
+
+  slides PresentationSlide[]
+}
+
+model PresentationSlide {
+  presentationId String
+  presentation   Presentation @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  slideId        String       @unique
+  slide          Slide        @relation(fields: [slideId], references: [id])
+  order          Int          @default(0)
+
+  @@id([presentationId, slideId])
+}
+
+model AuditLogEntry {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  targetType String?
+  targetId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+}
