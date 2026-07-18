@@ -1,27 +1,27 @@
 import { useAuth } from "../context/AuthContext";
+import { AppHeader } from "../components/AppHeader";
 
 export function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <span className="title">Еженедельная отчётность</span>
-        <span className="who">
-          {user?.fullName} <span className="badge">{user?.role === "ADMIN" ? "Администратор" : "Спикер"}</span>
-          <button className="link" onClick={logout}>
-            Выйти
-          </button>
-        </span>
-      </header>
+      <AppHeader />
 
       <div className="content">
         <div className="card">
-          <h2>Каркас Этапа 1 готов</h2>
-          <p>
-            Вход по логину/паролю и ролевая модель на бэкенде работают. Форма заполнения слайда, предпросмотр,
-            сборка презентации и остальные экраны появятся на следующих этапах (см. план-график).
-          </p>
+          <h2>Этап 2 готов</h2>
+          {user?.role === "ADMIN" ? (
+            <p>
+              Создавайте шаблоны слайдов на странице «Шаблоны» и управляйте недельными циклами на странице
+              «Циклы» — они появляются в верхней навигации.
+            </p>
+          ) : (
+            <p>
+              Заполните слайд на странице «Заполнить слайд» — выберите недельный цикл и шаблон, а форма
+              покажет живой предпросмотр по мере заполнения.
+            </p>
+          )}
         </div>
       </div>
     </div>
