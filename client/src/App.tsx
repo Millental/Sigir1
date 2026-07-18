@@ -5,6 +5,7 @@ import { TemplatesPage } from "./pages/TemplatesPage";
 import { CyclesPage } from "./pages/CyclesPage";
 import { SlideFormPage } from "./pages/SlideFormPage";
 import { ReviewPage } from "./pages/ReviewPage";
+import { AssemblePage } from "./pages/AssemblePage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export function App() {
@@ -48,6 +49,14 @@ export function App() {
         element={
           <ProtectedRoute role="ADMIN">
             <ReviewPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/presentation"
+        element={
+          <ProtectedRoute>
+            <AssemblePage />
           </ProtectedRoute>
         }
       />

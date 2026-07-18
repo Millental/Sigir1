@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
-import { api, Slide, SlideStatus, Template, WeeklyCycle } from "../api/client";
-
-const statusLabels: Record<SlideStatus, string> = {
-  DRAFT: "Черновик",
-  SUBMITTED: "На проверке",
-  NEEDS_REVISION: "Требует доработки",
-  IN_PRESENTATION: "В презентации",
-};
+import { api, Slide, Template, WeeklyCycle } from "../api/client";
+import { statusLabels } from "../statusLabels";
 
 export function SlideFormPage() {
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);

@@ -130,13 +130,13 @@ model Presentation {
 }
 
 model PresentationSlide {
-  presentationId String
-  presentation   Presentation @relation(fields: [presentationId], references: [id], onDelete: Cascade)
-  slideId        String       @unique
-  slide          Slide        @relation(fields: [slideId], references: [id])
-  order          Int          @default(0)
-
-  @@id([presentationId, slideId])
+  id               String       @id @default(uuid())
+  presentationId   String
+  presentation     Presentation @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  slideId          String?      @unique
+  slide            Slide?       @relation(fields: [slideId], references: [id])
+  placeholderLabel String?
+  order            Int          @default(0)
 }
 
 model AuditLogEntry {

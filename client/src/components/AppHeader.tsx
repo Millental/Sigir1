@@ -6,11 +6,13 @@ const adminLinks = [
   { to: "/templates", label: "Шаблоны" },
   { to: "/cycles", label: "Циклы" },
   { to: "/review", label: "Проверка" },
+  { to: "/presentation", label: "Презентация" },
 ];
 
 const speakerLinks = [
   { to: "/", label: "Дашборд" },
   { to: "/slides", label: "Заполнить слайд" },
+  { to: "/presentation", label: "Презентация" },
 ];
 
 export function AppHeader() {

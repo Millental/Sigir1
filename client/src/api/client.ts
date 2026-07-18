@@ -70,6 +70,26 @@ export interface Slide {
   owner: { id: string; fullName: string; login: string };
 }
 
+export interface PresentationSlide {
+  id: string;
+  order: number;
+  placeholderLabel: string | null;
+  slide: Slide | null;
+}
+
+export interface Presentation {
+  id: string;
+  weeklyCycleId: string;
+  assembledAt: string;
+  slides: PresentationSlide[];
+}
+
+export interface PresentationCycleView {
+  weeklyCycle: WeeklyCycle;
+  presentation: Presentation | null;
+  candidateSlides: Slide[];
+}
+
 export const api = {
   login: (login: string, password: string): Promise<CurrentUser> =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ login, password }) }),
@@ -113,4 +133,15 @@ export const api = {
     request(`/slides/${id}/review`, { method: "PATCH", body: JSON.stringify({ action: "approve" }) }),
   requestRevision: (id: string, comment: string): Promise<Slide> =>
     request(`/slides/${id}/review`, { method: "PATCH", body: JSON.stringify({ action: "request_revision", comment }) }),
+
+  getPresentation: (weeklyCycleId: string): Promise<PresentationCycleView> =>
+    request(`/presentations/cycle/${weeklyCycleId}`),
+  addSlideToPresentation: (weeklyCycleId: string, slideId: string): Promise<Presentation> =>
+    request(`/presentations/cycle/${weeklyCycleId}/slides`, { method: "POST", body: JSON.stringify({ slideId }) }),
+  addPlaceholderToPresentation: (weeklyCycleId: string, label: string): Promise<Presentation> =>
+    request(`/presentations/cycle/${weeklyCycleId}/placeholders`, { method: "POST", body: JSON.stringify({ label }) }),
+  removePresentationSlot: (presentationSlideId: string): Promise<Presentation> =>
+    request(`/presentations/slots/${presentationSlideId}`, { method: "DELETE" }),
+  reorderPresentation: (weeklyCycleId: string, order: string[]): Promise<Presentation> =>
+    request(`/presentations/cycle/${weeklyCycleId}/order`, { method: "PATCH", body: JSON.stringify({ order }) }),
 };

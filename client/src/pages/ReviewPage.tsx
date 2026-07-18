@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
-import { api, Slide, SlideStatus, WeeklyCycle } from "../api/client";
-
-const statusLabels: Record<SlideStatus, string> = {
-  DRAFT: "Черновик",
-  SUBMITTED: "На проверке",
-  NEEDS_REVISION: "Требует доработки",
-  IN_PRESENTATION: "В презентации",
-};
+import { api, Slide, WeeklyCycle } from "../api/client";
+import { statusLabels } from "../statusLabels";
 
 export function ReviewPage() {
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);
