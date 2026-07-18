@@ -4,6 +4,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { TemplatesPage } from "./pages/TemplatesPage";
 import { CyclesPage } from "./pages/CyclesPage";
 import { SlideFormPage } from "./pages/SlideFormPage";
+import { ReviewPage } from "./pages/ReviewPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export function App() {
@@ -39,6 +40,14 @@ export function App() {
         element={
           <ProtectedRoute role="SPEAKER">
             <SlideFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/review"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <ReviewPage />
           </ProtectedRoute>
         }
       />

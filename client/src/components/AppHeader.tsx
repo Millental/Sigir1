@@ -5,6 +5,7 @@ const adminLinks = [
   { to: "/", label: "Дашборд" },
   { to: "/templates", label: "Шаблоны" },
   { to: "/cycles", label: "Циклы" },
+  { to: "/review", label: "Проверка" },
 ];
 
 const speakerLinks = [

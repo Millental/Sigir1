@@ -103,6 +103,16 @@ button.primary:disabled {
   margin: 0 0 16px;
 }
 
+.review-comment {
+  border-left: 3px solid var(--danger);
+  background: #fbeceb;
+  color: var(--ink);
+  font-size: 13px;
+  padding: 8px 12px;
+  margin: 0 0 16px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
 .app-shell {
   min-height: 100vh;
 }

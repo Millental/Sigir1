@@ -10,6 +10,7 @@ const includeSlide = {
   fieldValues: true,
   template: { include: { fields: { orderBy: { order: "asc" as const } } } },
   weeklyCycle: true,
+  owner: { select: { id: true, fullName: true, login: true } },
 };
 
 router.get("/", async (req, res) => {
@@ -70,6 +71,34 @@ router.post("/", requireRole("SPEAKER"), async (req, res) => {
   res.status(201).json(slide);
 });
 
+router.post("/:id/submit", requireRole("SPEAKER"), async (req, res) => {
+  const slide = await prisma.slide.findUnique({
+    where: { id: req.params.id },
+    include: { weeklyCycle: true },
+  });
+  if (!slide || slide.ownerId !== req.user!.userId) {
+    return res.status(404).json({ error: "Слайд не найден" });
+  }
+  if (slide.status !== "DRAFT" && slide.status !== "NEEDS_REVISION") {
+    return res.status(403).json({ error: "Слайд уже отправлен на проверку" });
+  }
+  if (slide.weeklyCycle.status !== "COLLECTING") {
+    return res.status(403).json({ error: "Цикл закрыт для редактирования" });
+  }
+
+  const updated = await prisma.slide.update({
+    where: { id: slide.id },
+    data: { status: "SUBMITTED", reviewComment: null },
+    include: includeSlide,
+  });
+
+  await prisma.auditLogEntry.create({
+    data: { userId: req.user!.userId, action: "SLIDE_SUBMIT", targetType: "Slide", targetId: slide.id },
+  });
+
+  res.json(updated);
+});
+
 router.patch("/:id", requireRole("SPEAKER"), async (req, res) => {
   const { values } = req.body ?? {};
   if (!Array.isArray(values)) {
@@ -83,7 +112,7 @@ router.patch("/:id", requireRole("SPEAKER"), async (req, res) => {
   if (!slide || slide.ownerId !== req.user!.userId) {
     return res.status(404).json({ error: "Слайд не найден" });
   }
-  if (slide.status !== "DRAFT") {
+  if (slide.status !== "DRAFT" && slide.status !== "NEEDS_REVISION") {
     return res.status(403).json({ error: "Слайд уже отправлен и недоступен для редактирования" });
   }
   if (slide.weeklyCycle.status !== "COLLECTING") {
@@ -111,6 +140,50 @@ router.patch("/:id", requireRole("SPEAKER"), async (req, res) => {
 
   const updated = await prisma.slide.findUnique({ where: { id: slide.id }, include: includeSlide });
   res.json(updated);
+});
+
+router.get("/cycle/:weeklyCycleId", requireRole("ADMIN"), async (req, res) => {
+  const slides = await prisma.slide.findMany({
+    where: { weeklyCycleId: req.params.weeklyCycleId },
+    include: includeSlide,
+    orderBy: [{ owner: { fullName: "asc" } }, { template: { name: "asc" } }],
+  });
+  res.json(slides);
+});
+
+router.patch("/:id/review", requireRole("ADMIN"), async (req, res) => {
+  const { action, comment } = req.body ?? {};
+
+  const slide = await prisma.slide.findUnique({ where: { id: req.params.id } });
+  if (!slide) return res.status(404).json({ error: "Слайд не найден" });
+  if (slide.status !== "SUBMITTED") {
+    return res.status(403).json({ error: "Слайд не находится на проверке" });
+  }
+
+  if (action === "approve") {
+    await prisma.auditLogEntry.create({
+      data: { userId: req.user!.userId, action: "SLIDE_APPROVE", targetType: "Slide", targetId: slide.id },
+    });
+    const current = await prisma.slide.findUnique({ where: { id: slide.id }, include: includeSlide });
+    return res.json(current);
+  }
+
+  if (action === "request_revision") {
+    if (typeof comment !== "string" || !comment.trim()) {
+      return res.status(400).json({ error: "Укажите комментарий для доработки" });
+    }
+    const updated = await prisma.slide.update({
+      where: { id: slide.id },
+      data: { status: "NEEDS_REVISION", reviewComment: comment.trim() },
+      include: includeSlide,
+    });
+    await prisma.auditLogEntry.create({
+      data: { userId: req.user!.userId, action: "SLIDE_REQUEST_REVISION", targetType: "Slide", targetId: slide.id },
+    });
+    return res.json(updated);
+  }
+
+  res.status(400).json({ error: "Неизвестное действие" });
 });
 
 export default router;

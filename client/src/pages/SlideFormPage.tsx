@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
-import { api, Slide, Template, WeeklyCycle } from "../api/client";
+import { api, Slide, SlideStatus, Template, WeeklyCycle } from "../api/client";
+
+const statusLabels: Record<SlideStatus, string> = {
+  DRAFT: "Черновик",
+  SUBMITTED: "На проверке",
+  NEEDS_REVISION: "Требует доработки",
+  IN_PRESENTATION: "В презентации",
+};
 
 export function SlideFormPage() {
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);
@@ -11,6 +18,7 @@ export function SlideFormPage() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -64,13 +72,36 @@ export function SlideFormPage() {
     }
   }
 
+  async function handleSubmit() {
+    if (!slide) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const updated = await api.submitSlide(slide.id);
+      setSlide(updated);
+      setSaved(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось отправить слайд на проверку");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const editable = slide?.status === "DRAFT" || slide?.status === "NEEDS_REVISION";
+
   return (
     <div className="app-shell">
       <AppHeader />
       <div className="content two-col">
         <div className="card">
-          <h2>Заполнение слайда</h2>
+          <h2>
+            Заполнение слайда
+            {slide && <span className="badge"> {statusLabels[slide.status]}</span>}
+          </h2>
           {error && <p className="error-text">{error}</p>}
+          {slide?.status === "NEEDS_REVISION" && slide.reviewComment && (
+            <p className="review-comment">Комментарий проверяющего: {slide.reviewComment}</p>
+          )}
 
           <div className="field">
             <label htmlFor="cycle">Недельный цикл</label>
@@ -108,11 +139,15 @@ export function SlideFormPage() {
                   <label htmlFor={`field-${f.id}`}>
                     {f.label}
                     {f.isRequired && <span className="required-mark"> *</span>}
+                    {f.isRequired && editable && !values[f.id]?.trim() && (
+                      <span className="hint-text"> — не заполнено</span>
+                    )}
                   </label>
                   <textarea
                     id={`field-${f.id}`}
                     rows={3}
                     value={values[f.id] ?? ""}
+                    disabled={!editable}
                     onChange={(e) => {
                       setSaved(false);
                       setValues((prev) => ({ ...prev, [f.id]: e.target.value }));
@@ -120,10 +155,17 @@ export function SlideFormPage() {
                   />
                 </div>
               ))}
-              <button className="primary" onClick={handleSave} disabled={saving}>
-                {saving ? "Сохраняем…" : "Сохранить"}
-              </button>
-              {saved && <span className="saved-hint"> Сохранено</span>}
+              {editable && (
+                <>
+                  <button className="primary" onClick={handleSave} disabled={saving}>
+                    {saving ? "Сохраняем…" : "Сохранить"}
+                  </button>{" "}
+                  <button className="secondary" onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? "Отправляем…" : "Отправить на проверку"}
+                  </button>
+                  {saved && <span className="saved-hint"> Сохранено</span>}
+                </>
+              )}
             </>
           )}
         </div>

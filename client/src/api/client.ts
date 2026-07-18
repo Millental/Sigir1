@@ -63,9 +63,11 @@ export interface Slide {
   templateId: string;
   ownerId: string;
   status: SlideStatus;
+  reviewComment: string | null;
   fieldValues: SlideFieldValue[];
   template: Template;
   weeklyCycle: WeeklyCycle;
+  owner: { id: string; fullName: string; login: string };
 }
 
 export const api = {
@@ -104,4 +106,11 @@ export const api = {
   getSlide: (id: string): Promise<Slide> => request(`/slides/${id}`),
   updateSlide: (id: string, values: Array<{ templateFieldId: string; value: string }>): Promise<Slide> =>
     request(`/slides/${id}`, { method: "PATCH", body: JSON.stringify({ values }) }),
+  submitSlide: (id: string): Promise<Slide> => request(`/slides/${id}/submit`, { method: "POST" }),
+
+  listCycleSlides: (weeklyCycleId: string): Promise<Slide[]> => request(`/slides/cycle/${weeklyCycleId}`),
+  approveSlide: (id: string): Promise<Slide> =>
+    request(`/slides/${id}/review`, { method: "PATCH", body: JSON.stringify({ action: "approve" }) }),
+  requestRevision: (id: string, comment: string): Promise<Slide> =>
+    request(`/slides/${id}/review`, { method: "PATCH", body: JSON.stringify({ action: "request_revision", comment }) }),
 };
