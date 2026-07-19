@@ -118,8 +118,9 @@ export const api = {
   listCycles: (): Promise<WeeklyCycle[]> => request("/weekly-cycles"),
   createCycle: (data: { weekLabel: string; startDate: string; endDate: string }): Promise<WeeklyCycle> =>
     request("/weekly-cycles", { method: "POST", body: JSON.stringify(data) }),
-  updateCycle: (id: string, data: Partial<Pick<WeeklyCycle, "weekLabel" | "startDate" | "endDate" | "status">>): Promise<WeeklyCycle> =>
+  updateCycle: (id: string, data: Partial<Pick<WeeklyCycle, "weekLabel" | "startDate" | "endDate">>): Promise<WeeklyCycle> =>
     request(`/weekly-cycles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  archiveCycle: (id: string): Promise<WeeklyCycle> => request(`/weekly-cycles/${id}/archive`, { method: "POST" }),
 
   getOrCreateSlide: (weeklyCycleId: string, templateId: string): Promise<Slide> =>
     request("/slides", { method: "POST", body: JSON.stringify({ weeklyCycleId, templateId }) }),

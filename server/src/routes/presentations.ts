@@ -44,6 +44,9 @@ async function getOrCreatePresentation(
 router.get("/cycle/:weeklyCycleId", async (req, res) => {
   const weeklyCycle = await prisma.weeklyCycle.findUnique({ where: { id: req.params.weeklyCycleId } });
   if (!weeklyCycle) return res.status(404).json({ error: "Цикл не найден" });
+  if (req.user!.role === "SPEAKER" && weeklyCycle.status === "ARCHIVED") {
+    return res.status(403).json({ error: "Презентация архивирована и недоступна" });
+  }
 
   const presentation = await prisma.presentation.findUnique({
     where: { weeklyCycleId: weeklyCycle.id },

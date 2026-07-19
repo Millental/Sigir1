@@ -6,8 +6,9 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get("/", async (_req, res) => {
-  const cycles = await prisma.weeklyCycle.findMany({ orderBy: { startDate: "desc" } });
+router.get("/", async (req, res) => {
+  const where = req.user!.role === "SPEAKER" ? { status: { not: "ARCHIVED" as const } } : {};
+  const cycles = await prisma.weeklyCycle.findMany({ where, orderBy: { startDate: "desc" } });
   res.json(cycles);
 });
 
@@ -30,6 +31,11 @@ router.post("/", requireRole("ADMIN"), async (req, res) => {
 
 router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
   const { weekLabel, startDate, endDate, status } = req.body ?? {};
+  if (status !== undefined) {
+    return res.status(400).json({
+      error: "Статус меняется через отдельные действия — сборку презентации или архивацию",
+    });
+  }
   try {
     const cycle = await prisma.weeklyCycle.update({
       where: { id: req.params.id },
@@ -37,7 +43,6 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
         ...(weekLabel !== undefined ? { weekLabel } : {}),
         ...(startDate !== undefined ? { startDate: new Date(startDate) } : {}),
         ...(endDate !== undefined ? { endDate: new Date(endDate) } : {}),
-        ...(status !== undefined ? { status } : {}),
       },
     });
     await prisma.auditLogEntry.create({
@@ -47,6 +52,26 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
   } catch {
     res.status(404).json({ error: "Цикл не найден" });
   }
+});
+
+router.post("/:id/archive", requireRole("ADMIN"), async (req, res) => {
+  const cycle = await prisma.weeklyCycle.findUnique({
+    where: { id: req.params.id },
+    include: { presentation: true },
+  });
+  if (!cycle) return res.status(404).json({ error: "Цикл не найден" });
+  if (cycle.status !== "ASSEMBLED" || !cycle.presentation) {
+    return res.status(409).json({ error: "Архивировать можно только уже собранную презентацию" });
+  }
+
+  const updated = await prisma.weeklyCycle.update({
+    where: { id: cycle.id },
+    data: { status: "ARCHIVED" },
+  });
+  await prisma.auditLogEntry.create({
+    data: { userId: req.user!.userId, action: "CYCLE_ARCHIVE", targetType: "WeeklyCycle", targetId: cycle.id },
+  });
+  res.json(updated);
 });
 
 export default router;

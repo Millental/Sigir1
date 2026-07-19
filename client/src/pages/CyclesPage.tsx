@@ -19,6 +19,7 @@ export function CyclesPage() {
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
 
   function loadCycles() {
     api.listCycles().then(setCycles).catch(() => setError("Не удалось загрузить список циклов"));
@@ -50,13 +51,16 @@ export function CyclesPage() {
     }
   }
 
-  async function handleStatusChange(cycle: WeeklyCycle, status: WeeklyCycleStatus) {
+  async function handleArchive(cycle: WeeklyCycle) {
     setError(null);
+    setArchivingId(cycle.id);
     try {
-      await api.updateCycle(cycle.id, { status });
+      await api.archiveCycle(cycle.id);
       loadCycles();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось изменить статус цикла");
+      setError(err instanceof Error ? err.message : "Не удалось архивировать презентацию");
+    } finally {
+      setArchivingId(null);
     }
   }
 
@@ -83,13 +87,16 @@ export function CyclesPage() {
                   <td>{toDateInputValue(c.startDate)}</td>
                   <td>{toDateInputValue(c.endDate)}</td>
                   <td>
-                    <select value={c.status} onChange={(e) => handleStatusChange(c, e.target.value as WeeklyCycleStatus)}>
-                      {Object.entries(statusLabels).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
+                    <span className="badge">{statusLabels[c.status]}</span>
+                    {c.status === "ASSEMBLED" && (
+                      <button
+                        className="secondary"
+                        disabled={archivingId === c.id}
+                        onClick={() => handleArchive(c)}
+                      >
+                        {archivingId === c.id ? "Архивируем…" : "В архив"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
