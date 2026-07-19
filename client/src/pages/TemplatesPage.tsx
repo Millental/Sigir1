@@ -14,6 +14,20 @@ interface BlockRow {
   label: string;
   isRequired: boolean;
   columns: string;
+  previewImageBase64?: string;
+}
+
+interface ImportProposal {
+  index: number;
+  textSnippet: string;
+  layoutKind: LayoutKind;
+  blocks: Array<{
+    blockType: BlockType;
+    label: string;
+    order: number;
+    config?: { columns?: string[] };
+    previewImageBase64?: string;
+  }>;
 }
 
 const emptyField: FieldRow = { label: "", isRequired: false };
@@ -30,7 +44,20 @@ const blockTypeLabels: Record<BlockType, string> = {
   RICH_TEXT_SECTION: "Текстовая секция",
   TABLE: "Таблица",
   FOOTER_STATS: "Футер (кадровая статистика)",
+  CHART_IMAGE: "Изображение (из импорта)",
 };
+
+function proposalBadge(p: ImportProposal): string {
+  const counts: Record<string, number> = {};
+  for (const b of p.blocks) counts[b.blockType] = (counts[b.blockType] ?? 0) + 1;
+  const parts: string[] = [];
+  if (counts.RICH_TEXT_SECTION || counts.METRIC_TILE) {
+    parts.push(`текст: ${(counts.RICH_TEXT_SECTION ?? 0) + (counts.METRIC_TILE ?? 0)}`);
+  }
+  if (counts.TABLE) parts.push(`таблицы: ${counts.TABLE}`);
+  if (counts.CHART_IMAGE) parts.push(`изображения: ${counts.CHART_IMAGE}`);
+  return parts.join(", ");
+}
 
 function moveItem<T>(items: T[], index: number, delta: number): T[] {
   const target = index + delta;
@@ -52,6 +79,9 @@ export function TemplatesPage() {
   const [blocks, setBlocks] = useState<BlockRow[]>([{ ...emptyBlock }]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [importProposals, setImportProposals] = useState<ImportProposal[] | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   function loadTemplates() {
     api.listTemplates().then(setTemplates).catch(() => setError("Не удалось загрузить список шаблонов"));
@@ -130,6 +160,41 @@ export function TemplatesPage() {
 
   function moveBlock(index: number, delta: number) {
     setBlocks((prev) => moveItem(prev, index, delta));
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImportError(null);
+    setImporting(true);
+    try {
+      const result = await api.parsePptx(file);
+      setImportProposals(result.slides);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Не удалось разобрать файл");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function applyProposal(p: ImportProposal) {
+    setSelectedId(null);
+    setSelectedLayoutKind(null);
+    setSelectedFrozen(false);
+    setName("");
+    setIsShared(false);
+    setError(null);
+    setLayoutKind(p.layoutKind);
+    setBlocks(
+      p.blocks.map((b) => ({
+        blockType: b.blockType,
+        label: b.label,
+        isRequired: false,
+        columns: (b.config?.columns ?? []).join(", "),
+        previewImageBase64: b.previewImageBase64,
+      }))
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -218,6 +283,33 @@ export function TemplatesPage() {
           <button className="secondary" onClick={selectNew}>
             + Новый шаблон
           </button>
+
+          <div className="field import-field">
+            <label htmlFor="pptxImport">Импортировать из pptx</label>
+            <input id="pptxImport" type="file" accept=".pptx" disabled={importing} onChange={handleImportFile} />
+            {importing && <p className="hint-text">Разбираем файл…</p>}
+            {importError && <p className="error-text">{importError}</p>}
+          </div>
+
+          {importProposals && (
+            <div className="template-fields">
+              <label>Выберите слайд-образец ({importProposals.length})</label>
+              <ul className="template-list">
+                {importProposals.map((p) => (
+                  <li key={p.index}>
+                    <button type="button" className="template-list-item" onClick={() => applyProposal(p)}>
+                      Слайд {p.index + 1}: {p.textSnippet || "(без текста)"}
+                      <br />
+                      <span className="hint-text">{proposalBadge(p)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="secondary" onClick={() => setImportProposals(null)}>
+                Скрыть список
+              </button>
+            </div>
+          )}
         </div>
 
         <form className="card" onSubmit={handleSubmit}>
@@ -299,11 +391,13 @@ export function TemplatesPage() {
                       disabled={selectedFrozen}
                       onChange={(e) => updateBlock(i, { blockType: e.target.value as BlockType })}
                     >
-                      {Object.entries(blockTypeLabels).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
+                      {Object.entries(blockTypeLabels)
+                        .filter(([value]) => value !== "CHART_IMAGE" || b.blockType === "CHART_IMAGE")
+                        .map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
                     </select>
                     <input
                       placeholder="Подпись блока"
@@ -322,12 +416,25 @@ export function TemplatesPage() {
                       />
                     </div>
                   )}
+                  {b.blockType === "CHART_IMAGE" && (
+                    <div className="field-row">
+                      {b.previewImageBase64 ? (
+                        <img src={b.previewImageBase64} alt="Превью из pptx" className="chart-image-preview" />
+                      ) : (
+                        <p className="hint-text">
+                          Без превью — картинка из pptx не сохраняется на сервере, видна только во время импорта
+                          (например, уже сохранённый блок после перезагрузки, либо встроенный чарт pptx, для
+                          которого превью изначально не строится)
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="field-row">
                     <label className="inline-checkbox">
                       <input
                         type="checkbox"
                         checked={b.isRequired}
-                        disabled={selectedFrozen}
+                        disabled={selectedFrozen || b.blockType === "CHART_IMAGE"}
                         onChange={(e) => updateBlock(i, { isRequired: e.target.checked })}
                       />
                       обязательное

@@ -454,6 +454,19 @@ button.danger-outline {
   margin-bottom: 8px;
 }
 
+.chart-image-preview {
+  max-width: 160px;
+  max-height: 120px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.import-field {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
 .frozen-banner {
   background: var(--bg);
   border: 1px dashed var(--border);

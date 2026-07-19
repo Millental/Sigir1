@@ -4,9 +4,10 @@
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || `http://${window.location.hostname}:4000/api`;
 
 async function request(path: string, options: RequestInit = {}) {
+  const isFormData = options.body instanceof FormData;
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: { ...(isFormData ? {} : { "Content-Type": "application/json" }), ...(options.headers || {}) },
     ...options,
   });
   if (!res.ok) {
@@ -32,7 +33,7 @@ export interface TemplateField {
 }
 
 export type LayoutKind = "QUADRANT" | "FINANCIAL_CHART" | "SIMPLE_COLUMN";
-export type BlockType = "METRIC_TILE" | "RICH_TEXT_SECTION" | "TABLE" | "FOOTER_STATS";
+export type BlockType = "METRIC_TILE" | "RICH_TEXT_SECTION" | "TABLE" | "FOOTER_STATS" | "CHART_IMAGE";
 
 export interface TemplateBlock {
   id: string;
@@ -191,4 +192,23 @@ export const api = {
     request(`/presentations/slots/${presentationSlideId}`, { method: "DELETE" }),
   reorderPresentation: (weeklyCycleId: string, order: string[]): Promise<Presentation> =>
     request(`/presentations/cycle/${weeklyCycleId}/order`, { method: "PATCH", body: JSON.stringify({ order }) }),
+
+  parsePptx: (file: File): Promise<{
+    slides: Array<{
+      index: number;
+      textSnippet: string;
+      layoutKind: LayoutKind;
+      blocks: Array<{
+        blockType: BlockType;
+        label: string;
+        order: number;
+        config?: { columns?: string[] };
+        previewImageBase64?: string;
+      }>;
+    }>;
+  }> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request("/pptx-import/parse", { method: "POST", body: fd });
+  },
 };

@@ -13,7 +13,7 @@ const includeFields = {
 };
 
 const LAYOUT_KINDS = ["QUADRANT", "FINANCIAL_CHART", "SIMPLE_COLUMN"] as const;
-const BLOCK_TYPES = ["METRIC_TILE", "RICH_TEXT_SECTION", "TABLE", "FOOTER_STATS"] as const;
+const BLOCK_TYPES = ["METRIC_TILE", "RICH_TEXT_SECTION", "TABLE", "FOOTER_STATS", "CHART_IMAGE"] as const;
 type LayoutKind = (typeof LAYOUT_KINDS)[number];
 type BlockType = (typeof BLOCK_TYPES)[number];
 

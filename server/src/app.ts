@@ -7,6 +7,7 @@ import weeklyCycleRoutes from "./routes/weeklyCycles";
 import templateRoutes from "./routes/templates";
 import slideRoutes from "./routes/slides";
 import presentationRoutes from "./routes/presentations";
+import pptxImportRoutes from "./routes/pptxImport";
 
 export const app = express();
 
@@ -27,6 +28,7 @@ app.use("/api/weekly-cycles", weeklyCycleRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/slides", slideRoutes);
 app.use("/api/presentations", presentationRoutes);
+app.use("/api/pptx-import", pptxImportRoutes);
 
 // Единый обработчик непойманных ошибок — чтобы стек не утекал клиенту.
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

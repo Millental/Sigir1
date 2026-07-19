@@ -48,8 +48,13 @@ export function isBlockEmpty(blockType: BlockType, value: unknown): boolean {
   if (blockType === "METRIC_TILE") {
     return !asMetricTile(value).value.trim();
   }
+  if (blockType === "CHART_IMAGE") {
+    return true;
+  }
   return asTable(value).rows.length === 0;
 }
+
+const CHART_IMAGE_NOTE = "Загрузка изображений появится в одном из следующих этапов";
 
 export function BlockPreview({ block, value }: { block: TemplateBlock; value: unknown }) {
   if (block.blockType === "RICH_TEXT_SECTION" || block.blockType === "FOOTER_STATS") {
@@ -75,6 +80,15 @@ export function BlockPreview({ block, value }: { block: TemplateBlock; value: un
             {v.percent && <span>%: {v.percent}</span>}
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (block.blockType === "CHART_IMAGE") {
+    return (
+      <div className="preview-field">
+        <div className="preview-label">{block.label}</div>
+        <div className="preview-value muted-cell">— ({CHART_IMAGE_NOTE})</div>
       </div>
     );
   }
@@ -174,6 +188,15 @@ export function BlockEditor({
             onChange={(e) => onChange({ ...v, percent: e.target.value })}
           />
         </div>
+      </div>
+    );
+  }
+
+  if (block.blockType === "CHART_IMAGE") {
+    return (
+      <div className="field">
+        <label>{block.label}</label>
+        <p className="hint-text">{CHART_IMAGE_NOTE}</p>
       </div>
     );
   }

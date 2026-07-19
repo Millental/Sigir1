@@ -19,11 +19,12 @@ const includeSlide = {
   owner: { select: { id: true, fullName: true, login: true } },
 };
 
-type BlockType = "METRIC_TILE" | "RICH_TEXT_SECTION" | "TABLE" | "FOOTER_STATS";
+type BlockType = "METRIC_TILE" | "RICH_TEXT_SECTION" | "TABLE" | "FOOTER_STATS" | "CHART_IMAGE";
 
 function defaultValueFor(blockType: BlockType): unknown {
   if (blockType === "TABLE") return { rows: [] };
   if (blockType === "METRIC_TILE") return { value: "" };
+  if (blockType === "CHART_IMAGE") return { path: null };
   return { text: "" };
 }
 
@@ -43,6 +44,13 @@ function validateBlockValue(blockType: BlockType, config: any, value: unknown): 
       if (v[key] !== undefined && typeof v[key] !== "string") {
         return "Значения метрики должны быть строками";
       }
+    }
+    return null;
+  }
+
+  if (blockType === "CHART_IMAGE") {
+    if (v.path !== null) {
+      return "Загрузка изображений для этого блока появится в одном из следующих этапов";
     }
     return null;
   }
