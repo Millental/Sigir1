@@ -29,6 +29,19 @@ enum WeeklyCycleStatus {
   ARCHIVED
 }
 
+enum LayoutKind {
+  QUADRANT
+  FINANCIAL_CHART
+  SIMPLE_COLUMN
+}
+
+enum BlockType {
+  METRIC_TILE
+  RICH_TEXT_SECTION
+  TABLE
+  FOOTER_STATS
+}
+
 model User {
   id           String   @id @default(uuid())
   fullName     String
@@ -45,16 +58,18 @@ model User {
 }
 
 model Template {
-  id        String   @id @default(uuid())
-  name      String
-  isShared  Boolean  @default(false)
-  version   Int      @default(1)
-  createdBy String?
-  owner     User?    @relation("TemplateOwner", fields: [createdBy], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id @default(uuid())
+  name       String
+  isShared   Boolean     @default(false)
+  version    Int         @default(1)
+  createdBy  String?
+  owner      User?       @relation("TemplateOwner", fields: [createdBy], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  layoutKind LayoutKind?
 
   fields TemplateField[]
+  blocks TemplateBlock[]
   slides Slide[]
 }
 
@@ -67,6 +82,19 @@ model TemplateField {
   order      Int      @default(0)
 
   values SlideFieldValue[]
+}
+
+model TemplateBlock {
+  id         String    @id @default(uuid())
+  templateId String
+  template   Template  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  blockType  BlockType
+  label      String
+  isRequired Boolean   @default(false)
+  order      Int       @default(0)
+  config     Json?
+
+  values SlideBlockValue[]
 }
 
 model WeeklyCycle {
@@ -94,6 +122,7 @@ model Slide {
   updatedAt     DateTime    @updatedAt
 
   fieldValues       SlideFieldValue[]
+  blockValues       SlideBlockValue[]
   presentationSlide PresentationSlide?
 }
 
@@ -116,6 +145,29 @@ model FieldValueHistory {
   slideFieldValue   SlideFieldValue @relation(fields: [slideFieldValueId], references: [id], onDelete: Cascade)
   oldValue          String
   newValue          String
+  changedBy         String
+  changedAt         DateTime        @default(now())
+}
+
+model SlideBlockValue {
+  id              String        @id @default(uuid())
+  slideId         String
+  slide           Slide         @relation(fields: [slideId], references: [id], onDelete: Cascade)
+  templateBlockId String
+  templateBlock   TemplateBlock @relation(fields: [templateBlockId], references: [id])
+  value           Json          @default("{}")
+
+  history BlockValueHistory[]
+
+  @@unique([slideId, templateBlockId])
+}
+
+model BlockValueHistory {
+  id                String          @id @default(uuid())
+  slideBlockValueId String
+  slideBlockValue   SlideBlockValue @relation(fields: [slideBlockValueId], references: [id], onDelete: Cascade)
+  oldValue          Json
+  newValue          Json
   changedBy         String
   changedAt         DateTime        @default(now())
 }

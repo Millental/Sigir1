@@ -9,8 +9,14 @@ router.use(requireAuth);
 
 const includeSlideForSlot = {
   owner: { select: { id: true, fullName: true, login: true } },
-  template: { include: { fields: { orderBy: { order: "asc" as const } } } },
+  template: {
+    include: {
+      fields: { orderBy: { order: "asc" as const } },
+      blocks: { orderBy: { order: "asc" as const } },
+    },
+  },
   fieldValues: true,
+  blockValues: true,
 };
 
 const includePresentation = {

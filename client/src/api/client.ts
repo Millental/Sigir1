@@ -31,12 +31,28 @@ export interface TemplateField {
   order: number;
 }
 
+export type LayoutKind = "QUADRANT" | "FINANCIAL_CHART" | "SIMPLE_COLUMN";
+export type BlockType = "METRIC_TILE" | "RICH_TEXT_SECTION" | "TABLE" | "FOOTER_STATS";
+
+export interface TemplateBlock {
+  id: string;
+  templateId: string;
+  blockType: BlockType;
+  label: string;
+  isRequired: boolean;
+  order: number;
+  config: { columns?: string[] } | null;
+}
+
 export interface Template {
   id: string;
   name: string;
   isShared: boolean;
   version: number;
   fields: TemplateField[];
+  layoutKind: LayoutKind | null;
+  blocks: TemplateBlock[];
+  _count?: { slides: number };
 }
 
 export type WeeklyCycleStatus = "COLLECTING" | "ASSEMBLED" | "ARCHIVED";
@@ -57,6 +73,12 @@ export interface SlideFieldValue {
   value: string;
 }
 
+export interface SlideBlockValue {
+  id: string;
+  templateBlockId: string;
+  value: unknown;
+}
+
 export interface Slide {
   id: string;
   weeklyCycleId: string;
@@ -65,6 +87,7 @@ export interface Slide {
   status: SlideStatus;
   reviewComment: string | null;
   fieldValues: SlideFieldValue[];
+  blockValues: SlideBlockValue[];
   template: Template;
   weeklyCycle: WeeklyCycle;
   owner: { id: string; fullName: string; login: string };
@@ -106,12 +129,33 @@ export const api = {
     isShared: boolean;
     fields: Array<{ label: string; isRequired: boolean; order: number }>;
   }): Promise<Template> => request("/templates", { method: "POST", body: JSON.stringify(data) }),
+  createBlockTemplate: (data: {
+    name: string;
+    isShared: boolean;
+    layoutKind: LayoutKind;
+    blocks: Array<{ blockType: BlockType; label: string; isRequired: boolean; order: number; config?: { columns?: string[] } }>;
+  }): Promise<Template> => request("/templates", { method: "POST", body: JSON.stringify(data) }),
   updateTemplate: (
     id: string,
     data: {
       name?: string;
       isShared?: boolean;
       fields?: Array<{ id?: string; label: string; isRequired: boolean; order: number }>;
+    }
+  ): Promise<Template> => request(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  updateBlockTemplate: (
+    id: string,
+    data: {
+      name?: string;
+      isShared?: boolean;
+      blocks?: Array<{
+        id?: string;
+        blockType: BlockType;
+        label: string;
+        isRequired: boolean;
+        order: number;
+        config?: { columns?: string[] };
+      }>;
     }
   ): Promise<Template> => request(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
@@ -125,8 +169,10 @@ export const api = {
   getOrCreateSlide: (weeklyCycleId: string, templateId: string): Promise<Slide> =>
     request("/slides", { method: "POST", body: JSON.stringify({ weeklyCycleId, templateId }) }),
   getSlide: (id: string): Promise<Slide> => request(`/slides/${id}`),
-  updateSlide: (id: string, values: Array<{ templateFieldId: string; value: string }>): Promise<Slide> =>
+  updateSlideFields: (id: string, values: Array<{ templateFieldId: string; value: string }>): Promise<Slide> =>
     request(`/slides/${id}`, { method: "PATCH", body: JSON.stringify({ values }) }),
+  updateSlideBlocks: (id: string, blockValues: Array<{ templateBlockId: string; value: unknown }>): Promise<Slide> =>
+    request(`/slides/${id}`, { method: "PATCH", body: JSON.stringify({ blockValues }) }),
   submitSlide: (id: string): Promise<Slide> => request(`/slides/${id}/submit`, { method: "POST" }),
 
   listCycleSlides: (weeklyCycleId: string): Promise<Slide[]> => request(`/slides/cycle/${weeklyCycleId}`),

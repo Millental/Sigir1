@@ -391,3 +391,75 @@ button.danger-outline {
   font-size: 14px;
   white-space: pre-wrap;
 }
+
+.block-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.block-grid.layout-quadrant {
+  grid-template-columns: 1fr 1fr;
+}
+
+.block-grid.layout-financial {
+  grid-template-columns: 1fr;
+}
+
+.block-grid.layout-simple {
+  grid-template-columns: 1fr;
+}
+
+.metric-tile-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.metric-tile-details {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.metric-tile-row {
+  display: flex;
+  gap: 8px;
+}
+
+.metric-tile-row input {
+  flex: 1;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+
+.block-footer-band {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.template-block-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.template-block-row .field-row {
+  margin-bottom: 8px;
+}
+
+.frozen-banner {
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}

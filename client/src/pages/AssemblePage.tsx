@@ -3,6 +3,7 @@ import { AppHeader } from "../components/AppHeader";
 import { useAuth } from "../context/AuthContext";
 import { api, PresentationCycleView, PresentationSlide, WeeklyCycle } from "../api/client";
 import { statusLabels } from "../statusLabels";
+import { BlockPreview, layoutContainerClass } from "../components/slideBlocks";
 
 function moveSlot(slots: PresentationSlide[], index: number, delta: number): string[] {
   const next = [...slots];
@@ -174,10 +175,15 @@ export function AssemblePage() {
         )}
 
         {slots.map((slot, index) => {
+          const isBlockTemplate = slot.slide ? slot.slide.template.layoutKind != null : false;
           const sortedFields = slot.slide ? [...slot.slide.template.fields].sort((a, b) => a.order - b.order) : [];
           const valueByField = slot.slide
             ? new Map(slot.slide.fieldValues.map((v) => [v.templateFieldId, v.value]))
             : new Map<string, string>();
+          const sortedBlocks = slot.slide ? [...slot.slide.template.blocks].sort((a, b) => a.order - b.order) : [];
+          const valueByBlock = slot.slide
+            ? new Map(slot.slide.blockValues.map((v) => [v.templateBlockId, v.value]))
+            : new Map<string, unknown>();
 
           return (
           <div className="card preview-card" key={slot.id}>
@@ -196,6 +202,7 @@ export function AssemblePage() {
             </h3>
 
             {slot.slide &&
+              !isBlockTemplate &&
               sortedFields.map((f) => (
                 <div className="preview-field" key={f.id}>
                   <div className="preview-label">{f.label}</div>
@@ -204,6 +211,25 @@ export function AssemblePage() {
                   </div>
                 </div>
               ))}
+
+            {slot.slide && isBlockTemplate && (
+              <>
+                <div className={layoutContainerClass(slot.slide.template.layoutKind!)}>
+                  {sortedBlocks
+                    .filter((b) => b.blockType !== "FOOTER_STATS")
+                    .map((b) => (
+                      <BlockPreview key={b.id} block={b} value={valueByBlock.get(b.id)} />
+                    ))}
+                </div>
+                {sortedBlocks
+                  .filter((b) => b.blockType === "FOOTER_STATS")
+                  .map((b) => (
+                    <div className="block-footer-band" key={b.id}>
+                      <BlockPreview block={b} value={valueByBlock.get(b.id)} />
+                    </div>
+                  ))}
+              </>
+            )}
 
             {isAdmin && (
               <div className="field-row">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
 import { api, Slide, Template, WeeklyCycle } from "../api/client";
 import { statusLabels } from "../statusLabels";
+import { BlockEditor, BlockPreview, isBlockEmpty, layoutContainerClass } from "../components/slideBlocks";
 
 export function SlideFormPage() {
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);
@@ -10,6 +11,7 @@ export function SlideFormPage() {
   const [templateId, setTemplateId] = useState("");
   const [slide, setSlide] = useState<Slide | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [blockValues, setBlockValues] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -38,15 +40,23 @@ export function SlideFormPage() {
         const initial: Record<string, string> = {};
         for (const v of s.fieldValues) initial[v.templateFieldId] = v.value;
         setValues(initial);
+        const initialBlocks: Record<string, unknown> = {};
+        for (const v of s.blockValues) initialBlocks[v.templateBlockId] = v.value;
+        setBlockValues(initialBlocks);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Не удалось открыть слайд"))
       .finally(() => setLoading(false));
   }, [cycleId, templateId]);
 
   const selectedTemplate = slide?.template ?? templates.find((t) => t.id === templateId) ?? null;
+  const isBlockTemplate = selectedTemplate?.layoutKind != null;
   const sortedFields = useMemo(
-    () => (selectedTemplate ? [...selectedTemplate.fields].sort((a, b) => a.order - b.order) : []),
-    [selectedTemplate]
+    () => (selectedTemplate && !isBlockTemplate ? [...selectedTemplate.fields].sort((a, b) => a.order - b.order) : []),
+    [selectedTemplate, isBlockTemplate]
+  );
+  const sortedBlocks = useMemo(
+    () => (selectedTemplate && isBlockTemplate ? [...selectedTemplate.blocks].sort((a, b) => a.order - b.order) : []),
+    [selectedTemplate, isBlockTemplate]
   );
 
   async function handleSave() {
@@ -55,8 +65,14 @@ export function SlideFormPage() {
     setError(null);
     setSaved(false);
     try {
-      const payload = sortedFields.map((f) => ({ templateFieldId: f.id, value: values[f.id] ?? "" }));
-      const updated = await api.updateSlide(slide.id, payload);
+      let updated: Slide;
+      if (isBlockTemplate) {
+        const payload = sortedBlocks.map((b) => ({ templateBlockId: b.id, value: blockValues[b.id] }));
+        updated = await api.updateSlideBlocks(slide.id, payload);
+      } else {
+        const payload = sortedFields.map((f) => ({ templateFieldId: f.id, value: values[f.id] ?? "" }));
+        updated = await api.updateSlideFields(slide.id, payload);
+      }
       setSlide(updated);
       setSaved(true);
     } catch (err) {
@@ -126,7 +142,7 @@ export function SlideFormPage() {
 
           {loading && <p className="hint-text">Загрузка слайда…</p>}
 
-          {slide && !loading && (
+          {slide && !loading && !isBlockTemplate && (
             <>
               {sortedFields.map((f) => (
                 <div className="field" key={f.id}>
@@ -149,17 +165,39 @@ export function SlideFormPage() {
                   />
                 </div>
               ))}
-              {editable && (
-                <>
-                  <button className="primary" onClick={handleSave} disabled={saving}>
-                    {saving ? "Сохраняем…" : "Сохранить"}
-                  </button>{" "}
-                  <button className="secondary" onClick={handleSubmit} disabled={submitting}>
-                    {submitting ? "Отправляем…" : "Отправить на проверку"}
-                  </button>
-                  {saved && <span className="saved-hint"> Сохранено</span>}
-                </>
-              )}
+            </>
+          )}
+
+          {slide && !loading && isBlockTemplate && (
+            <>
+              {sortedBlocks.map((b) => (
+                <div key={b.id}>
+                  <BlockEditor
+                    block={b}
+                    value={blockValues[b.id]}
+                    disabled={!editable}
+                    onChange={(v) => {
+                      setSaved(false);
+                      setBlockValues((prev) => ({ ...prev, [b.id]: v }));
+                    }}
+                  />
+                  {b.isRequired && editable && isBlockEmpty(b.blockType, blockValues[b.id]) && (
+                    <p className="hint-text">— не заполнено</p>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+
+          {slide && !loading && editable && (
+            <>
+              <button className="primary" onClick={handleSave} disabled={saving}>
+                {saving ? "Сохраняем…" : "Сохранить"}
+              </button>{" "}
+              <button className="secondary" onClick={handleSubmit} disabled={submitting}>
+                {submitting ? "Отправляем…" : "Отправить на проверку"}
+              </button>
+              {saved && <span className="saved-hint"> Сохранено</span>}
             </>
           )}
         </div>
@@ -167,7 +205,7 @@ export function SlideFormPage() {
         <div className="card preview-slide">
           <h2>Предпросмотр</h2>
           {!selectedTemplate && <p className="hint-text">Выберите цикл и шаблон, чтобы увидеть предпросмотр.</p>}
-          {selectedTemplate && (
+          {selectedTemplate && !isBlockTemplate && (
             <div className="preview-card">
               <h3>{selectedTemplate.name}</h3>
               {sortedFields.map((f) => (
@@ -176,6 +214,25 @@ export function SlideFormPage() {
                   <div className="preview-value">{values[f.id] || <span className="muted-cell">—</span>}</div>
                 </div>
               ))}
+            </div>
+          )}
+          {selectedTemplate && isBlockTemplate && (
+            <div className="preview-card">
+              <h3>{selectedTemplate.name}</h3>
+              <div className={layoutContainerClass(selectedTemplate.layoutKind!)}>
+                {sortedBlocks
+                  .filter((b) => b.blockType !== "FOOTER_STATS")
+                  .map((b) => (
+                    <BlockPreview key={b.id} block={b} value={blockValues[b.id]} />
+                  ))}
+              </div>
+              {sortedBlocks
+                .filter((b) => b.blockType === "FOOTER_STATS")
+                .map((b) => (
+                  <div className="block-footer-band" key={b.id}>
+                    <BlockPreview block={b} value={blockValues[b.id]} />
+                  </div>
+                ))}
             </div>
           )}
         </div>

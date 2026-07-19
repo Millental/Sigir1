@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
 import { api, Slide, WeeklyCycle } from "../api/client";
 import { statusLabels } from "../statusLabels";
+import { BlockPreview, layoutContainerClass } from "../components/slideBlocks";
 
 export function ReviewPage() {
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);
@@ -92,8 +93,11 @@ export function ReviewPage() {
         </div>
 
         {slides.map((slide) => {
+          const isBlockTemplate = slide.template.layoutKind != null;
           const sortedFields = [...slide.template.fields].sort((a, b) => a.order - b.order);
           const valueByField = new Map(slide.fieldValues.map((v) => [v.templateFieldId, v.value]));
+          const sortedBlocks = [...slide.template.blocks].sort((a, b) => a.order - b.order);
+          const valueByBlock = new Map(slide.blockValues.map((v) => [v.templateBlockId, v.value]));
           const isRevisionOpen = revisionDraftId === slide.id;
 
           return (
@@ -108,14 +112,34 @@ export function ReviewPage() {
                 <p className="review-comment">Комментарий проверяющего: {slide.reviewComment}</p>
               )}
 
-              {sortedFields.map((f) => (
-                <div className="preview-field" key={f.id}>
-                  <div className="preview-label">{f.label}</div>
-                  <div className="preview-value">
-                    {valueByField.get(f.id) || <span className="muted-cell">—</span>}
+              {!isBlockTemplate &&
+                sortedFields.map((f) => (
+                  <div className="preview-field" key={f.id}>
+                    <div className="preview-label">{f.label}</div>
+                    <div className="preview-value">
+                      {valueByField.get(f.id) || <span className="muted-cell">—</span>}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+
+              {isBlockTemplate && (
+                <>
+                  <div className={layoutContainerClass(slide.template.layoutKind!)}>
+                    {sortedBlocks
+                      .filter((b) => b.blockType !== "FOOTER_STATS")
+                      .map((b) => (
+                        <BlockPreview key={b.id} block={b} value={valueByBlock.get(b.id)} />
+                      ))}
+                  </div>
+                  {sortedBlocks
+                    .filter((b) => b.blockType === "FOOTER_STATS")
+                    .map((b) => (
+                      <div className="block-footer-band" key={b.id}>
+                        <BlockPreview block={b} value={valueByBlock.get(b.id)} />
+                      </div>
+                    ))}
+                </>
+              )}
 
               {slide.status === "SUBMITTED" && (
                 <div className="field-row">
