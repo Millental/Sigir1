@@ -39,6 +39,7 @@ createdb weekly_report   # или через psql/pgAdmin
 cd server
 cp .env.example .env     # заполните DATABASE_URL, сгенерируйте JWT_SECRET, задайте SEED_ADMIN_PASSWORD
 npm install
+npx playwright install chromium   # headless-браузер для серверного экспорта в PDF (Этап 6)
 npx prisma migrate dev --name init
 npm run seed              # создаст первого администратора
 npm run dev                # http://localhost:4000
@@ -64,7 +65,10 @@ npm run dev                # http://localhost:5173
 1. Установить Node.js LTS и PostgreSQL на сервере.
 2. Создать пользователя БД и базу, аналогично локальному шагу.
 3. Скопировать содержимое `server/` и `client/` в `/opt/weekly-report/` (или через git clone из вашего репозитория).
-4. В `server/`: `npm ci`, `npm run build`, `npx prisma migrate deploy`, `npm run seed` (один раз), настроить `.env`.
+4. В `server/`: `npm ci`, `npx playwright install chromium` (и системные зависимости —
+   `npx playwright install-deps chromium`, если сервер «голый» Linux без уже установленных
+   библиотек для headless Chromium), `npm run build`, `npx prisma migrate deploy`, `npm run seed`
+   (один раз), настроить `.env`.
 5. В `client/`: `npm ci`, `npm run build` — результат в `client/dist/`.
 6. Установить systemd-сервис из `deploy/weekly-report-api.service` (`systemctl enable --now weekly-report-api`).
 7. Настроить nginx по примеру `deploy/nginx.conf.example` (раздача `client/dist` + проксирование `/api`).
@@ -77,6 +81,15 @@ npm run dev                # http://localhost:5173
   Если позже потребуется интеграция с корпоративным AD/LDAP, модуль аутентификации
   (`server/src/routes/auth.ts`) придётся переработать — сейчас он на это не рассчитан.
 - Время жизни сессии зашито как 10 часов (`COOKIE_MAX_AGE_MS` в `auth.ts`) — подтвердите значение.
+- **`CLIENT_ORIGIN` в проде (с Этапа 6).** Эта переменная раньше использовалась только для CORS;
+  теперь она также служит адресом, по которому сам Node-процесс (через headless Chromium)
+  обращается к собранному клиенту для рендера PDF-экспорта (`server/src/routes/presentationExport.ts`).
+  Пример `deploy/nginx.conf.example` сейчас настроен только на `server_name
+  weekly-report.internal.example` — на боевом сервере `CLIENT_ORIGIN`, скорее всего, нужно
+  указывать не на публичный домен, а на адрес, реально доступный с той же машины (например,
+  `http://127.0.0.1`, при условии что nginx примет такой Host — может понадобиться добавить
+  `default_server` или `server_name 127.0.0.1;`). Это не проверялось на боевом окружении — Этап 6
+  верифицирован только на localhost, проверка на бою — часть Вехи 2 (см. `SESSION_LOG.md`).
 
 ## Следующие шаги (Этап 2 по плану)
 

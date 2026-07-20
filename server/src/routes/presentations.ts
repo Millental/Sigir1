@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { assertPresentationReadAccess, PresentationAccessError } from "../utils/presentationAccess";
 
 const router = Router();
 
@@ -50,8 +51,11 @@ async function getOrCreatePresentation(
 router.get("/cycle/:weeklyCycleId", async (req, res) => {
   const weeklyCycle = await prisma.weeklyCycle.findUnique({ where: { id: req.params.weeklyCycleId } });
   if (!weeklyCycle) return res.status(404).json({ error: "Цикл не найден" });
-  if (req.user!.role === "SPEAKER" && weeklyCycle.status === "ARCHIVED") {
-    return res.status(403).json({ error: "Презентация архивирована и недоступна" });
+  try {
+    assertPresentationReadAccess(weeklyCycle, req.user!);
+  } catch (err) {
+    if (err instanceof PresentationAccessError) return res.status(err.status).json({ error: err.message });
+    throw err;
   }
 
   const presentation = await prisma.presentation.findUnique({

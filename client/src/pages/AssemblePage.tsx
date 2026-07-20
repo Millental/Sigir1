@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
 import { useAuth } from "../context/AuthContext";
 import { api, PresentationCycleView, PresentationSlide, WeeklyCycle } from "../api/client";
-import { statusLabels } from "../statusLabels";
-import { BlockPreview, layoutContainerClass } from "../components/slideBlocks";
+import { PresentationSlideCard } from "../components/PresentationSlideCard";
 
 function moveSlot(slots: PresentationSlide[], index: number, delta: number): string[] {
   const next = [...slots];
@@ -129,6 +128,13 @@ export function AssemblePage() {
           {cycleId && !loading && !view?.presentation && (
             <p className="hint-text">Презентация ещё не собрана.</p>
           )}
+          {view?.presentation && (
+            <div className="field-row">
+              <a className="secondary" href={api.exportPresentationPdfUrl(cycleId)} target="_blank" rel="noopener">
+                Скачать PDF презентации
+              </a>
+            </div>
+          )}
         </div>
 
         {isAdmin && cycleId && !loading && (
@@ -174,62 +180,15 @@ export function AssemblePage() {
           </div>
         )}
 
-        {slots.map((slot, index) => {
-          const isBlockTemplate = slot.slide ? slot.slide.template.layoutKind != null : false;
-          const sortedFields = slot.slide ? [...slot.slide.template.fields].sort((a, b) => a.order - b.order) : [];
-          const valueByField = slot.slide
-            ? new Map(slot.slide.fieldValues.map((v) => [v.templateFieldId, v.value]))
-            : new Map<string, string>();
-          const sortedBlocks = slot.slide ? [...slot.slide.template.blocks].sort((a, b) => a.order - b.order) : [];
-          const valueByBlock = slot.slide
-            ? new Map(slot.slide.blockValues.map((v) => [v.templateBlockId, v.value]))
-            : new Map<string, unknown>();
-
-          return (
+        {slots.map((slot, index) => (
           <div className="card preview-card" key={slot.id}>
-            <h3>
-              {slot.slide ? (
-                <>
-                  {slot.slide.owner.fullName} — {slot.slide.template.name}
-                  <span className="badge"> {statusLabels[slot.slide.status]}</span>
-                </>
-              ) : (
-                <>
-                  {slot.placeholderLabel}
-                  <span className="badge"> Заглушка</span>
-                </>
-              )}
-            </h3>
+            <PresentationSlideCard slot={slot} />
 
-            {slot.slide &&
-              !isBlockTemplate &&
-              sortedFields.map((f) => (
-                <div className="preview-field" key={f.id}>
-                  <div className="preview-label">{f.label}</div>
-                  <div className="preview-value">
-                    {valueByField.get(f.id) || <span className="muted-cell">—</span>}
-                  </div>
-                </div>
-              ))}
-
-            {slot.slide && isBlockTemplate && (
-              <>
-                <div className={layoutContainerClass(slot.slide.template.layoutKind!)}>
-                  {sortedBlocks
-                    .filter((b) => b.blockType !== "FOOTER_STATS")
-                    .map((b) => (
-                      <BlockPreview key={b.id} block={b} value={valueByBlock.get(b.id)} />
-                    ))}
-                </div>
-                {sortedBlocks
-                  .filter((b) => b.blockType === "FOOTER_STATS")
-                  .map((b) => (
-                    <div className="block-footer-band" key={b.id}>
-                      <BlockPreview block={b} value={valueByBlock.get(b.id)} />
-                    </div>
-                  ))}
-              </>
-            )}
+            <div className="field-row">
+              <a className="secondary" href={api.exportSlidePdfUrl(slot.id)} target="_blank" rel="noopener">
+                Скачать слайд (PDF)
+              </a>
+            </div>
 
             {isAdmin && (
               <div className="field-row">
@@ -252,8 +211,7 @@ export function AssemblePage() {
               </div>
             )}
           </div>
-          );
-        })}
+        ))}
       </div>
     </div>
   );

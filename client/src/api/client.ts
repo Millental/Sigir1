@@ -1,7 +1,7 @@
 // Хост берём из текущей страницы (не хардкодим "localhost"): на Windows-машинах, где dev-сервер
 // приходится поднимать на 127.0.0.1 (см. README), "localhost" и "127.0.0.1" — разные сайты для
 // SameSite-кук, и жёстко прописанный "localhost" ломал бы авторизованные запросы после логина.
-const API_BASE = (import.meta as any).env?.VITE_API_BASE || `http://${window.location.hostname}:4000/api`;
+export const API_BASE = (import.meta as any).env?.VITE_API_BASE || `http://${window.location.hostname}:4000/api`;
 
 async function request(path: string, options: RequestInit = {}) {
   const isFormData = options.body instanceof FormData;
@@ -192,6 +192,10 @@ export const api = {
     request(`/presentations/slots/${presentationSlideId}`, { method: "DELETE" }),
   reorderPresentation: (weeklyCycleId: string, order: string[]): Promise<Presentation> =>
     request(`/presentations/cycle/${weeklyCycleId}/order`, { method: "PATCH", body: JSON.stringify({ order }) }),
+  exportPresentationPdfUrl: (weeklyCycleId: string): string =>
+    `${API_BASE}/presentations/cycle/${weeklyCycleId}/export.pdf`,
+  exportSlidePdfUrl: (presentationSlideId: string): string =>
+    `${API_BASE}/presentations/slots/${presentationSlideId}/export.pdf`,
 
   parsePptx: (file: File): Promise<{
     slides: Array<{
