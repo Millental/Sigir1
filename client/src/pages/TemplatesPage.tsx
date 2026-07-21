@@ -44,7 +44,7 @@ const blockTypeLabels: Record<BlockType, string> = {
   RICH_TEXT_SECTION: "Текстовая секция",
   TABLE: "Таблица",
   FOOTER_STATS: "Футер (кадровая статистика)",
-  CHART_IMAGE: "Изображение (из импорта)",
+  CHART_IMAGE: "Изображение (график/диаграмма)",
 };
 
 function proposalBadge(p: ImportProposal): string {
@@ -391,13 +391,11 @@ export function TemplatesPage() {
                       disabled={selectedFrozen}
                       onChange={(e) => updateBlock(i, { blockType: e.target.value as BlockType })}
                     >
-                      {Object.entries(blockTypeLabels)
-                        .filter(([value]) => value !== "CHART_IMAGE" || b.blockType === "CHART_IMAGE")
-                        .map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
+                      {Object.entries(blockTypeLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
                     <input
                       placeholder="Подпись блока"
@@ -422,9 +420,8 @@ export function TemplatesPage() {
                         <img src={b.previewImageBase64} alt="Превью из pptx" className="chart-image-preview" />
                       ) : (
                         <p className="hint-text">
-                          Без превью — картинка из pptx не сохраняется на сервере, видна только во время импорта
-                          (например, уже сохранённый блок после перезагрузки, либо встроенный чарт pptx, для
-                          которого превью изначально не строится)
+                          Файл изображения загружается позже, при заполнении слайда — здесь задаётся только
+                          подпись блока.
                         </p>
                       )}
                     </div>
@@ -434,7 +431,7 @@ export function TemplatesPage() {
                       <input
                         type="checkbox"
                         checked={b.isRequired}
-                        disabled={selectedFrozen || b.blockType === "CHART_IMAGE"}
+                        disabled={selectedFrozen}
                         onChange={(e) => updateBlock(i, { isRequired: e.target.checked })}
                       />
                       обязательное

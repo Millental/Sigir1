@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
 import { api, Slide, WeeklyCycle } from "../api/client";
 import { statusLabels } from "../statusLabels";
-import { BlockPreview, layoutContainerClass } from "../components/slideBlocks";
+import { BlockEditor, BlockPreview, layoutContainerClass } from "../components/slideBlocks";
 
 export function ReviewPage() {
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);
@@ -36,6 +36,28 @@ export function ReviewPage() {
     }
     loadSlides(cycleId);
   }, [cycleId]);
+
+  function isSlideEditable(slide: Slide): boolean {
+    return (
+      (slide.status === "DRAFT" || slide.status === "NEEDS_REVISION") &&
+      slide.weeklyCycle.status === "COLLECTING"
+    );
+  }
+
+  function handleBlockValueChange(slideId: string, templateBlockId: string, value: unknown) {
+    setSlides((prev) =>
+      prev.map((s) =>
+        s.id !== slideId
+          ? s
+          : {
+              ...s,
+              blockValues: s.blockValues.map((v) =>
+                v.templateBlockId === templateBlockId ? { ...v, value } : v
+              ),
+            }
+      )
+    );
+  }
 
   async function handleApprove(slide: Slide) {
     setBusyId(slide.id);
@@ -127,9 +149,19 @@ export function ReviewPage() {
                   <div className={layoutContainerClass(slide.template.layoutKind!)}>
                     {sortedBlocks
                       .filter((b) => b.blockType !== "FOOTER_STATS")
-                      .map((b) => (
-                        <BlockPreview key={b.id} block={b} value={valueByBlock.get(b.id)} />
-                      ))}
+                      .map((b) =>
+                        b.blockType === "CHART_IMAGE" && isSlideEditable(slide) ? (
+                          <BlockEditor
+                            key={b.id}
+                            block={b}
+                            value={valueByBlock.get(b.id)}
+                            slideId={slide.id}
+                            onChange={(v) => handleBlockValueChange(slide.id, b.id, v)}
+                          />
+                        ) : (
+                          <BlockPreview key={b.id} block={b} value={valueByBlock.get(b.id)} />
+                        )
+                      )}
                   </div>
                   {sortedBlocks
                     .filter((b) => b.blockType === "FOOTER_STATS")

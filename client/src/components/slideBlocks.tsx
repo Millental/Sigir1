@@ -1,4 +1,5 @@
-import { BlockType, LayoutKind, TemplateBlock } from "../api/client";
+import { useEffect, useState } from "react";
+import { api, BlockType, LayoutKind, TemplateBlock } from "../api/client";
 
 interface RichTextValue {
   text: string;
@@ -35,6 +36,15 @@ function asTable(value: unknown): TableValue {
   return { rows: Array.isArray(v?.rows) ? (v!.rows as string[][]) : [] };
 }
 
+interface ChartImageValue {
+  path: string | null;
+}
+
+function asChartImage(value: unknown): ChartImageValue {
+  const v = value as Partial<ChartImageValue> | undefined;
+  return { path: typeof v?.path === "string" ? v.path : null };
+}
+
 export function layoutContainerClass(layoutKind: LayoutKind): string {
   if (layoutKind === "QUADRANT") return "block-grid layout-quadrant";
   if (layoutKind === "FINANCIAL_CHART") return "block-grid layout-financial";
@@ -49,12 +59,10 @@ export function isBlockEmpty(blockType: BlockType, value: unknown): boolean {
     return !asMetricTile(value).value.trim();
   }
   if (blockType === "CHART_IMAGE") {
-    return true;
+    return !asChartImage(value).path;
   }
   return asTable(value).rows.length === 0;
 }
-
-const CHART_IMAGE_NOTE = "Загрузка изображений появится в одном из следующих этапов";
 
 export function BlockPreview({ block, value }: { block: TemplateBlock; value: unknown }) {
   if (block.blockType === "RICH_TEXT_SECTION" || block.blockType === "FOOTER_STATS") {
@@ -85,10 +93,15 @@ export function BlockPreview({ block, value }: { block: TemplateBlock; value: un
   }
 
   if (block.blockType === "CHART_IMAGE") {
+    const { path } = asChartImage(value);
     return (
       <div className="preview-field">
         <div className="preview-label">{block.label}</div>
-        <div className="preview-value muted-cell">— ({CHART_IMAGE_NOTE})</div>
+        {path ? (
+          <img src={api.chartImageUrl(path)} alt={block.label} className="chart-image-preview" />
+        ) : (
+          <div className="preview-value muted-cell">—</div>
+        )}
       </div>
     );
   }
@@ -130,11 +143,13 @@ export function BlockEditor({
   value,
   onChange,
   disabled,
+  slideId,
 }: {
   block: TemplateBlock;
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
+  slideId: string;
 }) {
   if (block.blockType === "RICH_TEXT_SECTION" || block.blockType === "FOOTER_STATS") {
     const { text } = asRichText(value);
@@ -193,11 +208,16 @@ export function BlockEditor({
   }
 
   if (block.blockType === "CHART_IMAGE") {
+    const { path } = asChartImage(value);
     return (
-      <div className="field">
-        <label>{block.label}</label>
-        <p className="hint-text">{CHART_IMAGE_NOTE}</p>
-      </div>
+      <ChartImageEditor
+        slideId={slideId}
+        templateBlockId={block.id}
+        label={block.label}
+        path={path}
+        disabled={disabled}
+        onChange={onChange}
+      />
     );
   }
 
@@ -261,6 +281,100 @@ export function BlockEditor({
           + Добавить строку
         </button>
       )}
+    </div>
+  );
+}
+
+const CHART_IMAGE_MIME_TYPES = ["image/png", "image/jpeg"];
+const CHART_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+function ChartImageEditor({
+  slideId,
+  templateBlockId,
+  label,
+  path,
+  disabled,
+  onChange,
+}: {
+  slideId: string;
+  templateBlockId: string;
+  label: string;
+  path: string | null;
+  disabled?: boolean;
+  onChange: (value: unknown) => void;
+}) {
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    };
+  }, [localPreviewUrl]);
+
+  async function handleFile(file: File) {
+    setError(null);
+    if (!CHART_IMAGE_MIME_TYPES.includes(file.type)) {
+      setError("Допустимы только файлы PNG и JPG");
+      return;
+    }
+    if (file.size > CHART_IMAGE_MAX_BYTES) {
+      setError("Файл больше 5 МБ");
+      return;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    setLocalPreviewUrl(previewUrl);
+    setUploading(true);
+    try {
+      const result = await api.uploadChartImage(slideId, templateBlockId, file);
+      onChange({ path: result.value.path });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось загрузить файл");
+    } finally {
+      setUploading(false);
+      setLocalPreviewUrl(null);
+      URL.revokeObjectURL(previewUrl);
+    }
+  }
+
+  async function handleDelete() {
+    setError(null);
+    try {
+      await api.deleteChartImage(slideId, templateBlockId);
+      onChange({ path: null });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось удалить файл");
+    }
+  }
+
+  const displaySrc = localPreviewUrl ?? (path ? api.chartImageUrl(path) : null);
+
+  return (
+    <div className="field">
+      <label>{label}</label>
+      {displaySrc && <img src={displaySrc} alt={label} className="chart-image-preview" />}
+      {!disabled && (
+        <div className="field-row">
+          <input
+            type="file"
+            accept="image/png,image/jpeg"
+            disabled={uploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) handleFile(file);
+            }}
+          />
+          {path && !uploading && (
+            <button type="button" className="danger-outline" onClick={handleDelete}>
+              Удалить
+            </button>
+          )}
+        </div>
+      )}
+      {uploading && <p className="hint-text">Загрузка…</p>}
+      {error && <p className="error-text">{error}</p>}
     </div>
   );
 }

@@ -9,6 +9,10 @@ import slideRoutes from "./routes/slides";
 import presentationRoutes from "./routes/presentations";
 import presentationExportRoutes from "./routes/presentationExport";
 import pptxImportRoutes from "./routes/pptxImport";
+import uploadRoutes from "./routes/uploads";
+import { ensureChartImageDir } from "./utils/chartImageStorage";
+
+ensureChartImageDir();
 
 export const app = express();
 
@@ -31,6 +35,7 @@ app.use("/api/slides", slideRoutes);
 app.use("/api/presentations", presentationRoutes);
 app.use("/api/presentations", presentationExportRoutes);
 app.use("/api/pptx-import", pptxImportRoutes);
+app.use("/api/uploads", uploadRoutes);
 
 // Единый обработчик непойманных ошибок — чтобы стек не утекал клиенту.
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

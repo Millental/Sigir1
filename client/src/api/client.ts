@@ -215,4 +215,20 @@ export const api = {
     fd.append("file", file);
     return request("/pptx-import/parse", { method: "POST", body: fd });
   },
+
+  uploadChartImage: (
+    slideId: string,
+    templateBlockId: string,
+    file: File
+  ): Promise<{ templateBlockId: string; value: { path: string } }> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request(`/slides/${slideId}/blocks/${templateBlockId}/chart-image`, { method: "POST", body: fd });
+  },
+  deleteChartImage: (
+    slideId: string,
+    templateBlockId: string
+  ): Promise<{ templateBlockId: string; value: { path: null } }> =>
+    request(`/slides/${slideId}/blocks/${templateBlockId}/chart-image`, { method: "DELETE" }),
+  chartImageUrl: (assetId: string): string => `${API_BASE}/uploads/chart-images/${assetId}`,
 };

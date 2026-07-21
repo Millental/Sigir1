@@ -1,6 +1,16 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
+import multer from "multer";
+import fs from "fs/promises";
+import path from "path";
+import crypto from "crypto";
 import { prisma } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
+import {
+  CHART_IMAGE_DIR,
+  MAX_CHART_IMAGE_BYTES,
+  CHART_IMAGE_CONTENT_TYPES,
+  detectChartImageFormat,
+} from "../utils/chartImageStorage";
 
 const router = Router();
 
@@ -49,8 +59,8 @@ function validateBlockValue(blockType: BlockType, config: any, value: unknown): 
   }
 
   if (blockType === "CHART_IMAGE") {
-    if (v.path !== null) {
-      return "Загрузка изображений для этого блока появится в одном из следующих этапов";
+    if (v.path !== null && typeof v.path !== "string") {
+      return "Некорректное значение блока-изображения";
     }
     return null;
   }
@@ -73,6 +83,41 @@ function stableStringify(value: unknown): string {
     return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify((value as Record<string, unknown>)[k])}`).join(",")}}`;
   }
   return JSON.stringify(value);
+}
+
+const chartImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_CHART_IMAGE_BYTES },
+  fileFilter: (_req, file, cb) => {
+    const name = file.originalname.toLowerCase();
+    const okExt = name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg");
+    const okMime = file.mimetype === "image/png" || file.mimetype === "image/jpeg";
+    if (okExt && okMime) return cb(null, true);
+    cb(new Error("Допустимы только файлы PNG и JPG/JPEG"));
+  },
+});
+
+function loadSlideForImageMutation(slideId: string) {
+  return prisma.slide.findUnique({
+    where: { id: slideId },
+    include: { weeklyCycle: true, template: { include: { blocks: true } }, blockValues: true },
+  });
+}
+
+function checkImageMutationAccess(
+  slide: { ownerId: string; status: string; weeklyCycle: { status: string } },
+  user: { userId: string; role: "ADMIN" | "SPEAKER" }
+): { status: number; error: string } | null {
+  if (user.role === "SPEAKER" && slide.ownerId !== user.userId) {
+    return { status: 404, error: "Слайд не найден" };
+  }
+  if (slide.status !== "DRAFT" && slide.status !== "NEEDS_REVISION") {
+    return { status: 403, error: "Слайд уже отправлен и недоступен для редактирования" };
+  }
+  if (slide.weeklyCycle.status !== "COLLECTING") {
+    return { status: 403, error: "Цикл закрыт для редактирования" };
+  }
+  return null;
 }
 
 router.get("/", async (req, res) => {
@@ -205,8 +250,17 @@ router.patch("/:id", requireRole("SPEAKER"), async (req, res) => {
 
     for (const entry of blockValues as Array<{ templateBlockId: string; value: unknown }>) {
       const block = blockById.get(entry.templateBlockId);
-      if (!block || !currentByBlockId.has(entry.templateBlockId)) {
+      const current = currentByBlockId.get(entry.templateBlockId);
+      if (!block || !current) {
         return res.status(400).json({ error: "Неизвестный блок шаблона" });
+      }
+      if (block.blockType === "CHART_IMAGE") {
+        if (stableStringify(entry.value) !== stableStringify(current.value)) {
+          return res.status(400).json({
+            error: "Изображение для этого блока меняется отдельным запросом загрузки/удаления",
+          });
+        }
+        continue;
       }
       const error = validateBlockValue(block.blockType as BlockType, block.config, entry.value);
       if (error) return res.status(400).json({ error });
@@ -303,5 +357,117 @@ router.patch("/:id/review", requireRole("ADMIN"), async (req, res) => {
 
   res.status(400).json({ error: "Неизвестное действие" });
 });
+
+router.post(
+  "/:id/blocks/:templateBlockId/chart-image",
+  requireRole("SPEAKER", "ADMIN"),
+  chartImageUpload.single("file"),
+  (err: unknown, _req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({
+        error: err.code === "LIMIT_FILE_SIZE" ? "Файл больше 5 МБ" : "Не удалось загрузить файл",
+      });
+    }
+    if (err) {
+      return res.status(400).json({ error: err instanceof Error ? err.message : "Не удалось загрузить файл" });
+    }
+    next();
+  },
+  async (req: Request, res: Response) => {
+    const slide = await loadSlideForImageMutation(req.params.id);
+    if (!slide) return res.status(404).json({ error: "Слайд не найден" });
+    const authError = checkImageMutationAccess(slide, req.user!);
+    if (authError) return res.status(authError.status).json({ error: authError.error });
+
+    const block = slide.template.blocks.find((b) => b.id === req.params.templateBlockId);
+    if (!block || block.blockType !== "CHART_IMAGE") {
+      return res.status(400).json({ error: "Блок не найден или не является изображением" });
+    }
+    const current = slide.blockValues.find((v) => v.templateBlockId === block.id);
+    if (!current) return res.status(400).json({ error: "Значение блока не найдено" });
+    if (!req.file) return res.status(400).json({ error: "Выберите файл изображения" });
+
+    const format = detectChartImageFormat(req.file.buffer);
+    if (!format) return res.status(400).json({ error: "Файл повреждён или не является PNG/JPEG" });
+
+    const oldPath = (current.value as { path?: string | null } | null)?.path ?? null;
+    const assetId = crypto.randomUUID();
+    await fs.writeFile(path.join(CHART_IMAGE_DIR, assetId), req.file.buffer);
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.chartImageAsset.deleteMany({ where: { slideBlockValueId: current.id } });
+        await tx.chartImageAsset.create({
+          data: {
+            id: assetId,
+            slideBlockValueId: current.id,
+            extension: format.extension,
+            mimeType: format.mimeType,
+            originalFilename: req.file!.originalname,
+            sizeBytes: req.file!.size,
+            uploadedBy: req.user!.userId,
+          },
+        });
+        await tx.blockValueHistory.create({
+          data: {
+            slideBlockValueId: current.id,
+            oldValue: current.value as any,
+            newValue: { path: assetId } as any,
+            changedBy: req.user!.userId,
+          },
+        });
+        await tx.slideBlockValue.update({ where: { id: current.id }, data: { value: { path: assetId } as any } });
+      });
+    } catch (err) {
+      await fs.unlink(path.join(CHART_IMAGE_DIR, assetId)).catch(() => {});
+      throw err;
+    }
+
+    if (oldPath) {
+      await fs.unlink(path.join(CHART_IMAGE_DIR, oldPath)).catch(() => {});
+    }
+
+    res.json({ templateBlockId: block.id, value: { path: assetId } });
+  }
+);
+
+router.delete(
+  "/:id/blocks/:templateBlockId/chart-image",
+  requireRole("SPEAKER", "ADMIN"),
+  async (req: Request, res: Response) => {
+    const slide = await loadSlideForImageMutation(req.params.id);
+    if (!slide) return res.status(404).json({ error: "Слайд не найден" });
+    const authError = checkImageMutationAccess(slide, req.user!);
+    if (authError) return res.status(authError.status).json({ error: authError.error });
+
+    const block = slide.template.blocks.find((b) => b.id === req.params.templateBlockId);
+    if (!block || block.blockType !== "CHART_IMAGE") {
+      return res.status(400).json({ error: "Блок не найден или не является изображением" });
+    }
+    const current = slide.blockValues.find((v) => v.templateBlockId === block.id);
+    if (!current) return res.status(400).json({ error: "Значение блока не найдено" });
+
+    const oldPath = (current.value as { path?: string | null } | null)?.path ?? null;
+    if (!oldPath) {
+      return res.json({ templateBlockId: block.id, value: { path: null } });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.chartImageAsset.deleteMany({ where: { slideBlockValueId: current.id } });
+      await tx.blockValueHistory.create({
+        data: {
+          slideBlockValueId: current.id,
+          oldValue: current.value as any,
+          newValue: { path: null } as any,
+          changedBy: req.user!.userId,
+        },
+      });
+      await tx.slideBlockValue.update({ where: { id: current.id }, data: { value: { path: null } as any } });
+    });
+
+    await fs.unlink(path.join(CHART_IMAGE_DIR, oldPath)).catch(() => {});
+    res.json({ templateBlockId: block.id, value: { path: null } });
+  }
+);
 
 export default router;

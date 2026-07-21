@@ -62,6 +62,11 @@ export async function renderPresentationPdf(opts: RenderPdfOptions): Promise<Buf
       throw new Error(message);
     }
 
+    // data-print-status="ready" выставляется сразу после загрузки JSON презентации, до того как
+    // догрузятся <img> с реальными chart-image картинками — ждём сеть, иначе PDF может уйти в
+    // печать с пустыми/частично загруженными изображениями. Best-effort — таймаут не валит экспорт.
+    await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+
     const pdf = await page.pdf({
       format: "A4",
       landscape: true,

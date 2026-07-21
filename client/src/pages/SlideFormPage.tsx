@@ -176,9 +176,14 @@ export function SlideFormPage() {
                     block={b}
                     value={blockValues[b.id]}
                     disabled={!editable}
+                    slideId={slide.id}
                     onChange={(v) => {
-                      setSaved(false);
                       setBlockValues((prev) => ({ ...prev, [b.id]: v }));
+                      // Для CHART_IMAGE загрузка/удаление уже применены на сервере к моменту
+                      // вызова onChange (в отличие от остальных типов блоков, где onChange —
+                      // только локальное изменение до Save) — не показывать «есть несохранённые
+                      // изменения» там, где сохранять уже нечего.
+                      if (b.blockType !== "CHART_IMAGE") setSaved(false);
                     }}
                   />
                   {b.isRequired && editable && isBlockEmpty(b.blockType, blockValues[b.id]) && (

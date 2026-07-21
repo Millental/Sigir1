@@ -158,7 +158,8 @@ model SlideBlockValue {
   templateBlock   TemplateBlock @relation(fields: [templateBlockId], references: [id])
   value           Json          @default("{}")
 
-  history BlockValueHistory[]
+  history         BlockValueHistory[]
+  chartImageAsset ChartImageAsset?
 
   @@unique([slideId, templateBlockId])
 }
@@ -171,6 +172,18 @@ model BlockValueHistory {
   newValue          Json
   changedBy         String
   changedAt         DateTime        @default(now())
+}
+
+model ChartImageAsset {
+  id                String          @id @default(uuid())
+  slideBlockValueId String          @unique
+  slideBlockValue   SlideBlockValue @relation(fields: [slideBlockValueId], references: [id], onDelete: Cascade)
+  extension         String
+  mimeType          String
+  originalFilename  String
+  sizeBytes         Int
+  uploadedBy        String
+  createdAt         DateTime        @default(now())
 }
 
 model Presentation {
