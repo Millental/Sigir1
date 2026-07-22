@@ -119,6 +119,7 @@ export type NotificationKind = "PERSISTED" | "LIVE";
 export type NotificationTypeName =
   | "CYCLE_ASSEMBLED"
   | "CYCLE_ARCHIVED"
+  | "CYCLE_DISASSEMBLED"
   | "DEADLINE_APPROACHING"
   | "NEEDS_REVISION"
   | "ALL_SUBMITTED";
@@ -194,6 +195,8 @@ export const api = {
     data: Partial<Pick<WeeklyCycle, "weekLabel" | "startDate" | "endDate" | "deadline">>
   ): Promise<WeeklyCycle> => request(`/weekly-cycles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   archiveCycle: (id: string): Promise<WeeklyCycle> => request(`/weekly-cycles/${id}/archive`, { method: "POST" }),
+  disassembleCycle: (id: string): Promise<WeeklyCycle> =>
+    request(`/presentations/cycle/${id}/disassemble`, { method: "POST" }),
 
   getOrCreateSlide: (weeklyCycleId: string, templateId: string): Promise<Slide> =>
     request("/slides", { method: "POST", body: JSON.stringify({ weeklyCycleId, templateId }) }),

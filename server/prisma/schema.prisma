@@ -46,6 +46,7 @@ enum BlockType {
 enum NotificationType {
   CYCLE_ASSEMBLED
   CYCLE_ARCHIVED
+  CYCLE_DISASSEMBLED
 }
 
 model User {

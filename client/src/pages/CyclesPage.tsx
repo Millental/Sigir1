@@ -34,6 +34,7 @@ export function CyclesPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [disassemblingId, setDisassemblingId] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editWeekLabel, setEditWeekLabel] = useState("");
@@ -82,6 +83,19 @@ export function CyclesPage() {
       setError(err instanceof Error ? err.message : "Не удалось архивировать презентацию");
     } finally {
       setArchivingId(null);
+    }
+  }
+
+  async function handleDisassemble(cycle: WeeklyCycle) {
+    setError(null);
+    setDisassemblingId(cycle.id);
+    try {
+      await api.disassembleCycle(cycle.id);
+      loadCycles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось разобрать презентацию");
+    } finally {
+      setDisassemblingId(null);
     }
   }
 
@@ -180,13 +194,25 @@ export function CyclesPage() {
                     <td>
                       <span className="badge">{statusLabels[c.status]}</span>
                       {c.status === "ASSEMBLED" && (
-                        <button
-                          className="secondary"
-                          disabled={archivingId === c.id}
-                          onClick={() => handleArchive(c)}
-                        >
-                          {archivingId === c.id ? "Архивируем…" : "В архив"}
-                        </button>
+                        <>
+                          <button
+                            className="secondary"
+                            disabled={archivingId === c.id || disassemblingId === c.id}
+                            onClick={() => handleArchive(c)}
+                          >
+                            {archivingId === c.id ? "Архивируем…" : "В архив"}
+                          </button>
+                          <button
+                            className="secondary"
+                            disabled={archivingId === c.id || disassemblingId === c.id}
+                            onClick={() => handleDisassemble(c)}
+                          >
+                            {disassemblingId === c.id ? "Разбираем…" : "Разобрать"}
+                          </button>
+                          <p className="hint-text">
+                            Слайды вернутся в статус «Отправлен», заглушки будут удалены
+                          </p>
+                        </>
                       )}
                     </td>
                     <td>

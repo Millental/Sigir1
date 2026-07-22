@@ -7,7 +7,7 @@ export const DEADLINE_APPROACHING_HOURS = 24;
 export async function notifyCycleSlideOwners(
   tx: Prisma.TransactionClient,
   weeklyCycleId: string,
-  type: "CYCLE_ASSEMBLED" | "CYCLE_ARCHIVED",
+  type: "CYCLE_ASSEMBLED" | "CYCLE_ARCHIVED" | "CYCLE_DISASSEMBLED",
   message: string
 ): Promise<void> {
   const owners = await tx.slide.findMany({

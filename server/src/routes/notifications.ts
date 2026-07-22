@@ -10,6 +10,7 @@ router.use(requireAuth);
 type NotificationTypeName =
   | "CYCLE_ASSEMBLED"
   | "CYCLE_ARCHIVED"
+  | "CYCLE_DISASSEMBLED"
   | "DEADLINE_APPROACHING"
   | "NEEDS_REVISION"
   | "ALL_SUBMITTED";

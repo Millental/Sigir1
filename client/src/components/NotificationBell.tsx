@@ -16,6 +16,10 @@ function targetUrl(item: NotificationItem): string | null {
       // server/src/utils/presentationAccess.ts) — переход на /presentation гарантированно
       // упёрся бы в 403, так что для этого типа уведомление чисто информационное, без перехода.
       return null;
+    case "CYCLE_DISASSEMBLED":
+      // Слайд владельца снова SUBMITTED (не редактируем — редактирование доступно только в
+      // DRAFT/NEEDS_REVISION), вести в этот момент некуда — уведомление чисто информационное.
+      return null;
   }
 }
 

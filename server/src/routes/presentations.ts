@@ -33,6 +33,12 @@ async function getOrCreatePresentation(
   weeklyCycleId: string,
   userId: string
 ) {
+  // Блокирует строку WeeklyCycle на время транзакции — тот же приём использует
+  // POST .../disassemble, чтобы сборка/разборка одного и того же цикла не могли
+  // гонять друг друга (иначе слот, добавленный конкурентно с разборкой, мог бы
+  // осиротеть: Presentation удалится каскадом уже после его создания).
+  await tx.$queryRaw`SELECT id FROM "WeeklyCycle" WHERE id = ${weeklyCycleId} FOR UPDATE`;
+
   const existing = await tx.presentation.findUnique({ where: { weeklyCycleId } });
   if (existing) return existing;
 
@@ -243,6 +249,71 @@ router.delete("/slots/:presentationSlideId", requireRole("ADMIN"), async (req, r
   });
 
   res.json(presentation);
+});
+
+router.post("/cycle/:weeklyCycleId/disassemble", requireRole("ADMIN"), async (req, res) => {
+  const weeklyCycleId = req.params.weeklyCycleId;
+  const cycle = await prisma.weeklyCycle.findUnique({ where: { id: weeklyCycleId } });
+  if (!cycle) return res.status(404).json({ error: "Цикл не найден" });
+  if (cycle.status !== "ASSEMBLED") {
+    return res.status(409).json({ error: "Разобрать можно только уже собранную презентацию" });
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "WeeklyCycle" WHERE id = ${weeklyCycleId} FOR UPDATE`;
+
+    // Атомарный гейт на случай гонки (двойной клик/два админа одновременно): только один
+    // конкурентный вызов реально увидит status="ASSEMBLED" и продолжит; остальные получат
+    // count=0 и вернут 409, не породив дублирующие аудит-записи/уведомления.
+    const statusChange = await tx.weeklyCycle.updateMany({
+      where: { id: weeklyCycleId, status: "ASSEMBLED" },
+      data: { status: "COLLECTING" },
+    });
+    if (statusChange.count === 0) return null;
+
+    const presentation = await tx.presentation.findUnique({
+      where: { weeklyCycleId },
+      include: { slides: true },
+    });
+
+    let slideCount = 0;
+    let placeholderCount = 0;
+    if (presentation) {
+      const realSlideIds = presentation.slides.filter((s) => s.slideId).map((s) => s.slideId as string);
+      slideCount = realSlideIds.length;
+      placeholderCount = presentation.slides.length - realSlideIds.length;
+      if (realSlideIds.length > 0) {
+        await tx.slide.updateMany({ where: { id: { in: realSlideIds } }, data: { status: "SUBMITTED" } });
+      }
+      await tx.presentation.delete({ where: { id: presentation.id } }); // каскадно удаляет PresentationSlide
+    }
+    // Если presentation отсутствует при status="ASSEMBLED" — та же аномалия рассинхронизации,
+    // что уже встречалась (см. SESSION_LOG.md, циклы 5а/6) — статус всё равно откатывается,
+    // а не блокируется 409, чтобы не оставлять цикл замороженным без выхода.
+
+    const c = await tx.weeklyCycle.findUniqueOrThrow({ where: { id: weeklyCycleId } });
+    await tx.auditLogEntry.create({
+      data: {
+        userId: req.user!.userId,
+        action: "PRESENTATION_DISASSEMBLE",
+        targetType: "WeeklyCycle",
+        targetId: weeklyCycleId,
+        details: `слайдов: ${slideCount}, заглушек: ${placeholderCount}`,
+      },
+    });
+    await notifyCycleSlideOwners(
+      tx,
+      weeklyCycleId,
+      "CYCLE_DISASSEMBLED",
+      `Презентация недели «${c.weekLabel}» разобрана администратором — состав нужно собрать заново`
+    );
+    return c;
+  });
+
+  if (!updated) {
+    return res.status(409).json({ error: "Разобрать можно только уже собранную презентацию" });
+  }
+  res.json(updated);
 });
 
 export default router;
