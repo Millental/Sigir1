@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { assertPresentationReadAccess, PresentationAccessError } from "../utils/presentationAccess";
+import { notifyCycleSlideOwners } from "../utils/notifications";
 
 const router = Router();
 
@@ -36,7 +37,7 @@ async function getOrCreatePresentation(
   if (existing) return existing;
 
   const presentation = await tx.presentation.create({ data: { weeklyCycleId } });
-  await tx.weeklyCycle.update({ where: { id: weeklyCycleId }, data: { status: "ASSEMBLED" } });
+  const cycle = await tx.weeklyCycle.update({ where: { id: weeklyCycleId }, data: { status: "ASSEMBLED" } });
   await tx.auditLogEntry.create({
     data: {
       userId,
@@ -45,6 +46,7 @@ async function getOrCreatePresentation(
       targetId: weeklyCycleId,
     },
   });
+  await notifyCycleSlideOwners(tx, weeklyCycleId, "CYCLE_ASSEMBLED", `Презентация недели «${cycle.weekLabel}» собрана`);
   return presentation;
 }
 

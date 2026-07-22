@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppHeader } from "../components/AppHeader";
 import { api, Slide, Template, WeeklyCycle } from "../api/client";
 import { statusLabels } from "../statusLabels";
 import { BlockEditor, BlockPreview, isBlockEmpty, layoutContainerClass } from "../components/slideBlocks";
 
 export function SlideFormPage() {
+  const [searchParams] = useSearchParams();
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [cycleId, setCycleId] = useState("");
-  const [templateId, setTemplateId] = useState("");
+  const [cycleId, setCycleId] = useState(() => searchParams.get("cycle") ?? "");
+  const [templateId, setTemplateId] = useState(() => searchParams.get("template") ?? "");
   const [slide, setSlide] = useState<Slide | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [blockValues, setBlockValues] = useState<Record<string, unknown>>({});

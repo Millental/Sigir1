@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { notifyCycleSlideOwners } from "../utils/notifications";
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.post("/", requireRole("ADMIN"), async (req, res) => {
 });
 
 router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
-  const { weekLabel, startDate, endDate, status } = req.body ?? {};
+  const { weekLabel, startDate, endDate, deadline, status } = req.body ?? {};
   if (status !== undefined) {
     return res.status(400).json({
       error: "Статус меняется через отдельные действия — сборку презентации или архивацию",
@@ -43,6 +44,7 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
         ...(weekLabel !== undefined ? { weekLabel } : {}),
         ...(startDate !== undefined ? { startDate: new Date(startDate) } : {}),
         ...(endDate !== undefined ? { endDate: new Date(endDate) } : {}),
+        ...(deadline !== undefined ? { deadline: deadline === null ? null : new Date(deadline) } : {}),
       },
     });
     await prisma.auditLogEntry.create({
@@ -64,12 +66,16 @@ router.post("/:id/archive", requireRole("ADMIN"), async (req, res) => {
     return res.status(409).json({ error: "Архивировать можно только уже собранную презентацию" });
   }
 
-  const updated = await prisma.weeklyCycle.update({
-    where: { id: cycle.id },
-    data: { status: "ARCHIVED" },
-  });
-  await prisma.auditLogEntry.create({
-    data: { userId: req.user!.userId, action: "CYCLE_ARCHIVE", targetType: "WeeklyCycle", targetId: cycle.id },
+  const updated = await prisma.$transaction(async (tx) => {
+    const c = await tx.weeklyCycle.update({
+      where: { id: cycle.id },
+      data: { status: "ARCHIVED" },
+    });
+    await tx.auditLogEntry.create({
+      data: { userId: req.user!.userId, action: "CYCLE_ARCHIVE", targetType: "WeeklyCycle", targetId: cycle.id },
+    });
+    await notifyCycleSlideOwners(tx, cycle.id, "CYCLE_ARCHIVED", `Презентация недели «${c.weekLabel}» архивирована`);
+    return c;
   });
   res.json(updated);
 });

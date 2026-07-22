@@ -43,6 +43,11 @@ enum BlockType {
   CHART_IMAGE
 }
 
+enum NotificationType {
+  CYCLE_ASSEMBLED
+  CYCLE_ARCHIVED
+}
+
 model User {
   id           String   @id @default(uuid())
   fullName     String
@@ -53,9 +58,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  templates    Template[]      @relation("TemplateOwner")
-  slides       Slide[]
-  auditEntries AuditLogEntry[]
+  templates     Template[]      @relation("TemplateOwner")
+  slides        Slide[]
+  auditEntries  AuditLogEntry[]
+  notifications Notification[]
 }
 
 model Template {
@@ -103,10 +109,12 @@ model WeeklyCycle {
   weekLabel String
   startDate DateTime
   endDate   DateTime
+  deadline  DateTime?
   status    WeeklyCycleStatus @default(COLLECTING)
 
-  slides       Slide[]
-  presentation Presentation?
+  slides        Slide[]
+  presentation  Presentation?
+  notifications Notification[]
 }
 
 model Slide {
@@ -214,4 +222,19 @@ model AuditLogEntry {
   targetId   String?
   details    String?
   createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  recipientId   String
+  recipient     User             @relation(fields: [recipientId], references: [id])
+  type          NotificationType
+  weeklyCycleId String
+  weeklyCycle   WeeklyCycle      @relation(fields: [weeklyCycleId], references: [id])
+  message       String
+  createdAt     DateTime         @default(now())
+  readAt        DateTime?
+  hiddenAt      DateTime?
+
+  @@index([recipientId, hiddenAt])
 }

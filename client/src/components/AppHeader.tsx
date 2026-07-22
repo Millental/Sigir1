@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { NotificationBell } from "./NotificationBell";
 
 const adminLinks = [
   { to: "/", label: "Дашборд" },
@@ -37,6 +38,7 @@ export function AppHeader() {
         </nav>
       </div>
       <span className="who">
+        <NotificationBell />
         {user?.fullName} <span className="badge">{user?.role === "ADMIN" ? "Администратор" : "Спикер"}</span>
         <button className="link" onClick={logout}>
           Выйти

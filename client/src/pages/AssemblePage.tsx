@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppHeader } from "../components/AppHeader";
 import { useAuth } from "../context/AuthContext";
 import { api, PresentationCycleView, PresentationSlide, WeeklyCycle } from "../api/client";
@@ -16,8 +17,9 @@ export function AssemblePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
 
+  const [searchParams] = useSearchParams();
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);
-  const [cycleId, setCycleId] = useState("");
+  const [cycleId, setCycleId] = useState(() => searchParams.get("cycle") ?? "");
   const [view, setView] = useState<PresentationCycleView | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export function AssemblePage() {
           </div>
 
           {loading && <p className="hint-text">Загрузка…</p>}
-          {cycleId && !loading && !view?.presentation && (
+          {cycleId && !loading && !error && !view?.presentation && (
             <p className="hint-text">Презентация ещё не собрана.</p>
           )}
           {view?.presentation && (

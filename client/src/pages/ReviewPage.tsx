@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppHeader } from "../components/AppHeader";
 import { api, Slide, WeeklyCycle } from "../api/client";
 import { statusLabels } from "../statusLabels";
 import { BlockEditor, BlockPreview, layoutContainerClass } from "../components/slideBlocks";
 
 export function ReviewPage() {
+  const [searchParams] = useSearchParams();
   const [cycles, setCycles] = useState<WeeklyCycle[]>([]);
-  const [cycleId, setCycleId] = useState("");
+  const [cycleId, setCycleId] = useState(() => searchParams.get("cycle") ?? "");
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

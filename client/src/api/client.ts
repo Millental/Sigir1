@@ -63,6 +63,7 @@ export interface WeeklyCycle {
   weekLabel: string;
   startDate: string;
   endDate: string;
+  deadline: string | null;
   status: WeeklyCycleStatus;
 }
 
@@ -114,6 +115,31 @@ export interface PresentationCycleView {
   candidateSlides: Slide[];
 }
 
+export type NotificationKind = "PERSISTED" | "LIVE";
+export type NotificationTypeName =
+  | "CYCLE_ASSEMBLED"
+  | "CYCLE_ARCHIVED"
+  | "DEADLINE_APPROACHING"
+  | "NEEDS_REVISION"
+  | "ALL_SUBMITTED";
+
+export interface NotificationItem {
+  id: string;
+  kind: NotificationKind;
+  type: NotificationTypeName;
+  message: string;
+  createdAt: string | null;
+  readAt: string | null;
+  weeklyCycleId: string;
+  slideId: string | null;
+  templateId: string | null;
+}
+
+export interface NotificationsResponse {
+  items: NotificationItem[];
+  unreadCount: number;
+}
+
 export const api = {
   login: (login: string, password: string): Promise<CurrentUser> =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ login, password }) }),
@@ -163,8 +189,10 @@ export const api = {
   listCycles: (): Promise<WeeklyCycle[]> => request("/weekly-cycles"),
   createCycle: (data: { weekLabel: string; startDate: string; endDate: string }): Promise<WeeklyCycle> =>
     request("/weekly-cycles", { method: "POST", body: JSON.stringify(data) }),
-  updateCycle: (id: string, data: Partial<Pick<WeeklyCycle, "weekLabel" | "startDate" | "endDate">>): Promise<WeeklyCycle> =>
-    request(`/weekly-cycles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  updateCycle: (
+    id: string,
+    data: Partial<Pick<WeeklyCycle, "weekLabel" | "startDate" | "endDate" | "deadline">>
+  ): Promise<WeeklyCycle> => request(`/weekly-cycles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   archiveCycle: (id: string): Promise<WeeklyCycle> => request(`/weekly-cycles/${id}/archive`, { method: "POST" }),
 
   getOrCreateSlide: (weeklyCycleId: string, templateId: string): Promise<Slide> =>
@@ -231,4 +259,9 @@ export const api = {
   ): Promise<{ templateBlockId: string; value: { path: null } }> =>
     request(`/slides/${slideId}/blocks/${templateBlockId}/chart-image`, { method: "DELETE" }),
   chartImageUrl: (assetId: string): string => `${API_BASE}/uploads/chart-images/${assetId}`,
+
+  listNotifications: (): Promise<NotificationsResponse> => request("/notifications"),
+  markNotificationRead: (id: string): Promise<unknown> => request(`/notifications/${id}/read`, { method: "POST" }),
+  markAllNotificationsRead: (): Promise<null> => request("/notifications/read-all", { method: "POST" }),
+  hideNotification: (id: string): Promise<unknown> => request(`/notifications/${id}/hide`, { method: "POST" }),
 };
