@@ -4,6 +4,7 @@ import { AppHeader } from "../components/AppHeader";
 import { api, Slide, Template, WeeklyCycle } from "../api/client";
 import { statusLabels } from "../statusLabels";
 import { BlockEditor, BlockPreview, isBlockEmpty, layoutContainerClass } from "../components/slideBlocks";
+import { SlideHistoryPanel } from "../components/SlideHistoryPanel";
 
 export function SlideFormPage() {
   const [searchParams] = useSearchParams();
@@ -207,6 +208,8 @@ export function SlideFormPage() {
               {saved && <span className="saved-hint"> Сохранено</span>}
             </>
           )}
+
+          {slide && !loading && <SlideHistoryPanel slideId={slide.id} />}
         </div>
 
         <div className="card preview-slide">

@@ -141,6 +141,32 @@ export interface NotificationsResponse {
   unreadCount: number;
 }
 
+export interface SlideHistoryItem {
+  kind: "field" | "block";
+  label: string;
+  blockType?: BlockType;
+  oldValue: unknown;
+  newValue: unknown;
+  changedBy: { id: string; fullName: string };
+  changedAt: string;
+}
+
+export interface SlideHistoryResponse {
+  items: SlideHistoryItem[];
+}
+
+export interface TemplateVersionItem {
+  id: string;
+  versionNumber: number;
+  name: string;
+  isShared: boolean;
+  layoutKind: LayoutKind | null;
+  fieldsSnapshot: Array<{ id: string; label: string; isRequired: boolean; order: number }> | null;
+  blocksSnapshot: Array<{ id: string; blockType: BlockType; label: string; isRequired: boolean; order: number; config: unknown }> | null;
+  changedBy: { id: string; fullName: string };
+  createdAt: string;
+}
+
 export const api = {
   login: (login: string, password: string): Promise<CurrentUser> =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ login, password }) }),
@@ -267,4 +293,8 @@ export const api = {
   markNotificationRead: (id: string): Promise<unknown> => request(`/notifications/${id}/read`, { method: "POST" }),
   markAllNotificationsRead: (): Promise<null> => request("/notifications/read-all", { method: "POST" }),
   hideNotification: (id: string): Promise<unknown> => request(`/notifications/${id}/hide`, { method: "POST" }),
+
+  getSlideHistory: (slideId: string): Promise<SlideHistoryResponse> => request(`/slides/${slideId}/history`),
+  getTemplateVersions: (templateId: string): Promise<TemplateVersionItem[]> =>
+    request(`/templates/${templateId}/versions`),
 };

@@ -1,6 +1,8 @@
 import { Router } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
+import { stableStringify } from "../utils/stableStringify";
 
 const router = Router();
 
@@ -34,6 +36,29 @@ router.get("/:id", async (req, res) => {
   res.json(template);
 });
 
+router.get("/:id/versions", requireRole("ADMIN"), async (req, res) => {
+  const versions = await prisma.templateVersion.findMany({
+    where: { templateId: req.params.id },
+    orderBy: { versionNumber: "desc" },
+  });
+  const changedByIds = [...new Set(versions.map((v) => v.changedBy))];
+  const users = await prisma.user.findMany({ where: { id: { in: changedByIds } }, select: { id: true, fullName: true } });
+  const nameById = new Map(users.map((u) => [u.id, u.fullName]));
+  res.json(
+    versions.map((v) => ({
+      id: v.id,
+      versionNumber: v.versionNumber,
+      name: v.name,
+      isShared: v.isShared,
+      layoutKind: v.layoutKind,
+      fieldsSnapshot: v.fieldsSnapshot,
+      blocksSnapshot: v.blocksSnapshot,
+      changedBy: { id: v.changedBy, fullName: nameById.get(v.changedBy) ?? "?" },
+      createdAt: v.createdAt,
+    }))
+  );
+});
+
 interface FieldInput {
   id?: string;
   label: string;
@@ -48,6 +73,39 @@ interface BlockInput {
   isRequired?: boolean;
   order?: number;
   config?: { columns?: string[] } | null;
+}
+
+function fieldsSnapshotOf(fields: { id: string; label: string; isRequired: boolean; order: number }[]) {
+  return [...fields]
+    .sort((a, b) => a.order - b.order)
+    .map((f) => ({ id: f.id, label: f.label, isRequired: f.isRequired, order: f.order }));
+}
+
+function blocksSnapshotOf(
+  blocks: { id: string; blockType: string; label: string; isRequired: boolean; order: number; config: unknown }[]
+) {
+  return [...blocks]
+    .sort((a, b) => a.order - b.order)
+    .map((b) => ({ id: b.id, blockType: b.blockType, label: b.label, isRequired: b.isRequired, order: b.order, config: b.config }));
+}
+
+// Сравнение "до/после" для пропуска бесполезных версий при no-op сохранении (тот же принцип,
+// что stableStringify уже применяет в slides.ts для истории значений) — сортировка внутри
+// fieldsSnapshotOf/blocksSnapshotOf обязательна, потому что `existing` читается без orderBy,
+// а includeFields (использованный для итогового состояния) его применяет.
+function templateSnapshotKey(t: {
+  name: string;
+  isShared: boolean;
+  layoutKind: string | null;
+  fields: { id: string; label: string; isRequired: boolean; order: number }[];
+  blocks: { id: string; blockType: string; label: string; isRequired: boolean; order: number; config: unknown }[];
+}): string {
+  return stableStringify({
+    name: t.name,
+    isShared: t.isShared,
+    fieldsSnapshot: t.layoutKind === null ? fieldsSnapshotOf(t.fields) : null,
+    blocksSnapshot: t.layoutKind !== null ? blocksSnapshotOf(t.blocks) : null,
+  });
 }
 
 function validateBlocks(blocks: unknown): string | null {
@@ -80,23 +138,39 @@ router.post("/", requireRole("ADMIN"), async (req, res) => {
     const blocksError = validateBlocks(blocks);
     if (blocksError) return res.status(400).json({ error: blocksError });
 
-    const template = await prisma.template.create({
-      data: {
-        name,
-        isShared: Boolean(isShared),
-        createdBy: req.user!.userId,
-        layoutKind: layoutKind as LayoutKind,
-        blocks: {
-          create: (blocks as BlockInput[]).map((b, i) => ({
-            blockType: b.blockType as BlockType,
-            label: b.label,
-            isRequired: Boolean(b.isRequired),
-            order: b.order ?? i,
-            config: b.blockType === "TABLE" ? { columns: b.config?.columns } : undefined,
-          })),
+    const template = await prisma.$transaction(async (tx) => {
+      const created = await tx.template.create({
+        data: {
+          name,
+          isShared: Boolean(isShared),
+          createdBy: req.user!.userId,
+          layoutKind: layoutKind as LayoutKind,
+          blocks: {
+            create: (blocks as BlockInput[]).map((b, i) => ({
+              blockType: b.blockType as BlockType,
+              label: b.label,
+              isRequired: Boolean(b.isRequired),
+              order: b.order ?? i,
+              config: b.blockType === "TABLE" ? { columns: b.config?.columns } : undefined,
+            })),
+          },
         },
-      },
-      include: includeFields,
+        include: includeFields,
+      });
+
+      await tx.templateVersion.create({
+        data: {
+          templateId: created.id,
+          versionNumber: 1,
+          name: created.name,
+          isShared: created.isShared,
+          layoutKind: created.layoutKind,
+          blocksSnapshot: blocksSnapshotOf(created.blocks) as Prisma.InputJsonValue,
+          changedBy: req.user!.userId,
+        },
+      });
+
+      return created;
     });
 
     await prisma.auditLogEntry.create({
@@ -113,20 +187,36 @@ router.post("/", requireRole("ADMIN"), async (req, res) => {
     return res.status(400).json({ error: "У каждого поля должна быть подпись" });
   }
 
-  const template = await prisma.template.create({
-    data: {
-      name,
-      isShared: Boolean(isShared),
-      createdBy: req.user!.userId,
-      fields: {
-        create: (fields as FieldInput[]).map((f, i) => ({
-          label: f.label,
-          isRequired: Boolean(f.isRequired),
-          order: f.order ?? i,
-        })),
+  const template = await prisma.$transaction(async (tx) => {
+    const created = await tx.template.create({
+      data: {
+        name,
+        isShared: Boolean(isShared),
+        createdBy: req.user!.userId,
+        fields: {
+          create: (fields as FieldInput[]).map((f, i) => ({
+            label: f.label,
+            isRequired: Boolean(f.isRequired),
+            order: f.order ?? i,
+          })),
+        },
       },
-    },
-    include: includeFields,
+      include: includeFields,
+    });
+
+    await tx.templateVersion.create({
+      data: {
+        templateId: created.id,
+        versionNumber: 1,
+        name: created.name,
+        isShared: created.isShared,
+        layoutKind: created.layoutKind,
+        fieldsSnapshot: fieldsSnapshotOf(created.fields),
+        changedBy: req.user!.userId,
+      },
+    });
+
+    return created;
   });
 
   await prisma.auditLogEntry.create({
@@ -185,7 +275,26 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
           }
         }
 
-        return tx.template.findUniqueOrThrow({ where: { id: templateId }, include: includeFields });
+        const finalTemplate = await tx.template.findUniqueOrThrow({ where: { id: templateId }, include: includeFields });
+        if (templateSnapshotKey(existing) !== templateSnapshotKey(finalTemplate)) {
+          const bumped = await tx.template.update({
+            where: { id: templateId },
+            data: { version: { increment: 1 } },
+          });
+          await tx.templateVersion.create({
+            data: {
+              templateId,
+              versionNumber: bumped.version,
+              name: finalTemplate.name,
+              isShared: finalTemplate.isShared,
+              layoutKind: finalTemplate.layoutKind,
+              fieldsSnapshot: fieldsSnapshotOf(finalTemplate.fields),
+              changedBy: req.user!.userId,
+            },
+          });
+          return { ...finalTemplate, version: bumped.version };
+        }
+        return finalTemplate;
       });
 
       await prisma.auditLogEntry.create({
@@ -250,7 +359,26 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
         }
       }
 
-      return tx.template.findUniqueOrThrow({ where: { id: templateId }, include: includeFields });
+      const finalTemplate = await tx.template.findUniqueOrThrow({ where: { id: templateId }, include: includeFields });
+      if (templateSnapshotKey(existing) !== templateSnapshotKey(finalTemplate)) {
+        const bumped = await tx.template.update({
+          where: { id: templateId },
+          data: { version: { increment: 1 } },
+        });
+        await tx.templateVersion.create({
+          data: {
+            templateId,
+            versionNumber: bumped.version,
+            name: finalTemplate.name,
+            isShared: finalTemplate.isShared,
+            layoutKind: finalTemplate.layoutKind,
+            blocksSnapshot: blocksSnapshotOf(finalTemplate.blocks) as Prisma.InputJsonValue,
+            changedBy: req.user!.userId,
+          },
+        });
+        return { ...finalTemplate, version: bumped.version };
+      }
+      return finalTemplate;
     });
 
     await prisma.auditLogEntry.create({

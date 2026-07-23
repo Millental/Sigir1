@@ -4,6 +4,7 @@ import { AppHeader } from "../components/AppHeader";
 import { api, Slide, WeeklyCycle } from "../api/client";
 import { statusLabels } from "../statusLabels";
 import { BlockEditor, BlockPreview, layoutContainerClass } from "../components/slideBlocks";
+import { SlideHistoryPanel } from "../components/SlideHistoryPanel";
 
 export function ReviewPage() {
   const [searchParams] = useSearchParams();
@@ -220,6 +221,8 @@ export function ReviewPage() {
                   </button>
                 </div>
               )}
+
+              <SlideHistoryPanel slideId={slide.id} />
             </div>
           );
         })}

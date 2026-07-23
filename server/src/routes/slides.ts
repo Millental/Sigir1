@@ -11,6 +11,7 @@ import {
   CHART_IMAGE_CONTENT_TYPES,
   detectChartImageFormat,
 } from "../utils/chartImageStorage";
+import { stableStringify } from "../utils/stableStringify";
 
 const router = Router();
 
@@ -76,15 +77,6 @@ function validateBlockValue(blockType: BlockType, config: any, value: unknown): 
   return null;
 }
 
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  if (value !== null && typeof value === "object") {
-    const keys = Object.keys(value as Record<string, unknown>).sort();
-    return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify((value as Record<string, unknown>)[k])}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
 const chartImageUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_CHART_IMAGE_BYTES },
@@ -135,6 +127,53 @@ router.get("/:id", async (req, res) => {
     return res.status(404).json({ error: "Слайд не найден" });
   }
   res.json(slide);
+});
+
+router.get("/:id/history", async (req, res) => {
+  // Отдельная проверка доступа, не переиспользует GET /:id — тому нет обхода для ADMIN, а
+  // историю (в отличие от мутаций Этапа 7) читать может ADMIN на любом слайде, без статусных
+  // ограничений: она не зависит от текущего состояния слайда/цикла.
+  const slide = await prisma.slide.findUnique({ where: { id: req.params.id } });
+  if (!slide || (req.user!.role !== "ADMIN" && slide.ownerId !== req.user!.userId)) {
+    return res.status(404).json({ error: "Слайд не найден" });
+  }
+
+  const [fieldHistory, blockHistory] = await Promise.all([
+    prisma.fieldValueHistory.findMany({
+      where: { slideFieldValue: { slideId: slide.id } },
+      include: { slideFieldValue: { include: { templateField: true } } },
+    }),
+    prisma.blockValueHistory.findMany({
+      where: { slideBlockValue: { slideId: slide.id } },
+      include: { slideBlockValue: { include: { templateBlock: true } } },
+    }),
+  ]);
+
+  const changedByIds = [...new Set([...fieldHistory, ...blockHistory].map((h) => h.changedBy))];
+  const users = await prisma.user.findMany({ where: { id: { in: changedByIds } }, select: { id: true, fullName: true } });
+  const nameById = new Map(users.map((u) => [u.id, u.fullName]));
+
+  const items = [
+    ...fieldHistory.map((h) => ({
+      kind: "field" as const,
+      label: h.slideFieldValue.templateField.label,
+      oldValue: h.oldValue as unknown,
+      newValue: h.newValue as unknown,
+      changedBy: { id: h.changedBy, fullName: nameById.get(h.changedBy) ?? "?" },
+      changedAt: h.changedAt,
+    })),
+    ...blockHistory.map((h) => ({
+      kind: "block" as const,
+      label: h.slideBlockValue.templateBlock.label,
+      blockType: h.slideBlockValue.templateBlock.blockType,
+      oldValue: h.oldValue as unknown,
+      newValue: h.newValue as unknown,
+      changedBy: { id: h.changedBy, fullName: nameById.get(h.changedBy) ?? "?" },
+      changedAt: h.changedAt,
+    })),
+  ].sort((a, b) => b.changedAt.getTime() - a.changedAt.getTime());
+
+  res.json({ items });
 });
 
 router.post("/", requireRole("SPEAKER"), async (req, res) => {

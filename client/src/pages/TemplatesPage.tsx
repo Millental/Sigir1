@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
-import { api, BlockType, LayoutKind, Template } from "../api/client";
+import { api, BlockType, LayoutKind, Template, TemplateVersionItem } from "../api/client";
 
 interface FieldRow {
   id?: string;
@@ -72,6 +72,10 @@ export function TemplatesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedLayoutKind, setSelectedLayoutKind] = useState<LayoutKind | null>(null);
   const [selectedFrozen, setSelectedFrozen] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [versions, setVersions] = useState<TemplateVersionItem[] | null>(null);
+  const [versionsLoading, setVersionsLoading] = useState(false);
   const [name, setName] = useState("");
   const [isShared, setIsShared] = useState(false);
   const [fields, setFields] = useState<FieldRow[]>([{ ...emptyField }]);
@@ -95,6 +99,9 @@ export function TemplatesPage() {
     setSelectedId(null);
     setSelectedLayoutKind(null);
     setSelectedFrozen(false);
+    setSelectedVersion(null);
+    setVersionsOpen(false);
+    setVersions(null);
     setName("");
     setIsShared(false);
     setLayoutKind("SIMPLE_COLUMN");
@@ -106,6 +113,9 @@ export function TemplatesPage() {
     setSelectedId(t.id);
     setSelectedLayoutKind(t.layoutKind);
     setSelectedFrozen((t._count?.slides ?? 0) > 0);
+    setSelectedVersion(t.version);
+    setVersionsOpen(false);
+    setVersions(null);
     setName(t.name);
     setIsShared(t.isShared);
     setError(null);
@@ -130,6 +140,18 @@ export function TemplatesPage() {
           }))
       );
     }
+  }
+
+  function toggleVersions() {
+    if (!versionsOpen && versions === null && selectedId) {
+      setVersionsLoading(true);
+      api
+        .getTemplateVersions(selectedId)
+        .then(setVersions)
+        .catch(() => setError("Не удалось загрузить историю версий"))
+        .finally(() => setVersionsLoading(false));
+    }
+    setVersionsOpen((o) => !o);
   }
 
   const isBlockForm = selectedId === null || selectedLayoutKind !== null;
@@ -313,8 +335,50 @@ export function TemplatesPage() {
         </div>
 
         <form className="card" onSubmit={handleSubmit}>
-          <h2>{selectedId ? "Редактирование шаблона" : "Новый шаблон"}</h2>
+          <h2>
+            {selectedId ? "Редактирование шаблона" : "Новый шаблон"}
+            {selectedId && selectedVersion !== null && <span className="badge"> версия {selectedVersion}</span>}
+          </h2>
           {error && <p className="error-text">{error}</p>}
+
+          {selectedId && (
+            <div className="template-version-history">
+              <button type="button" className="secondary" onClick={toggleVersions}>
+                {versionsOpen ? "Скрыть историю версий" : "История версий"}
+              </button>
+              {versionsOpen && (
+                <div className="slide-history-list">
+                  {versionsLoading && <p className="hint-text">Загрузка…</p>}
+                  {versions && versions.length === 0 && <p className="hint-text">История версий пуста.</p>}
+                  {versions && versions.length > 0 && (
+                    <ul>
+                      {versions.map((v) => (
+                        <li key={v.id} className="slide-history-item">
+                          <div className="slide-history-item-label">версия {v.versionNumber}: {v.name}</div>
+                          <div className="slide-history-item-value">
+                            {v.isShared ? "общий" : "личный"},{" "}
+                            {v.layoutKind === null
+                              ? `полей: ${v.fieldsSnapshot?.length ?? 0}`
+                              : `блоков: ${v.blocksSnapshot?.length ?? 0}`}
+                          </div>
+                          <div className="slide-history-item-meta">
+                            {v.changedBy.fullName},{" "}
+                            {new Date(v.createdAt).toLocaleString("ru-RU", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="name">Название</label>
