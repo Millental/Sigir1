@@ -7,6 +7,7 @@ import { SlideFormPage } from "./pages/SlideFormPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { AssemblePage } from "./pages/AssemblePage";
 import { PrintPage } from "./pages/PrintPage";
+import { AuditLogPage } from "./pages/AuditLogPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export function App() {
@@ -58,6 +59,14 @@ export function App() {
         element={
           <ProtectedRoute>
             <AssemblePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit-log"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <AuditLogPage />
           </ProtectedRoute>
         }
       />

@@ -8,6 +8,7 @@ const adminLinks = [
   { to: "/cycles", label: "Циклы" },
   { to: "/review", label: "Проверка" },
   { to: "/presentation", label: "Презентация" },
+  { to: "/audit-log", label: "Аудит" },
 ];
 
 const speakerLinks = [

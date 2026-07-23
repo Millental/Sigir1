@@ -17,6 +17,15 @@ async function request(path: string, options: RequestInit = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+function toQueryString(params: Record<string, string | number | undefined>): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== "") qs.set(k, String(v));
+  }
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
 export interface CurrentUser {
   id: string;
   fullName: string;
@@ -167,12 +176,47 @@ export interface TemplateVersionItem {
   createdAt: string;
 }
 
+export interface UserListItem {
+  id: string;
+  fullName: string;
+  login: string;
+  role: "ADMIN" | "SPEAKER";
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AuditLogItem {
+  id: string;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  details: string | null;
+  createdAt: string;
+  user: { id: string; fullName: string } | null;
+}
+
+export interface AuditLogFilters {
+  from?: string;
+  to?: string;
+  action?: string;
+  targetType?: string;
+  userId?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface AuditLogResponse {
+  items: AuditLogItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 export const api = {
   login: (login: string, password: string): Promise<CurrentUser> =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ login, password }) }),
   logout: () => request("/auth/logout", { method: "POST" }),
   me: (): Promise<CurrentUser> => request("/auth/me"),
-  listUsers: () => request("/users"),
+  listUsers: (): Promise<UserListItem[]> => request("/users"),
   createUser: (data: { fullName: string; login: string; role: "ADMIN" | "SPEAKER" }) =>
     request("/users", { method: "POST", body: JSON.stringify(data) }),
 
@@ -297,4 +341,7 @@ export const api = {
   getSlideHistory: (slideId: string): Promise<SlideHistoryResponse> => request(`/slides/${slideId}/history`),
   getTemplateVersions: (templateId: string): Promise<TemplateVersionItem[]> =>
     request(`/templates/${templateId}/versions`),
+
+  getAuditLog: (filters: AuditLogFilters = {}): Promise<AuditLogResponse> =>
+    request(`/audit-log${toQueryString({ ...filters })}`),
 };

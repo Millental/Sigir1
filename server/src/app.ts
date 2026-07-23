@@ -11,6 +11,7 @@ import presentationExportRoutes from "./routes/presentationExport";
 import pptxImportRoutes from "./routes/pptxImport";
 import uploadRoutes from "./routes/uploads";
 import notificationRoutes from "./routes/notifications";
+import auditLogRoutes from "./routes/auditLog";
 import { ensureChartImageDir } from "./utils/chartImageStorage";
 
 ensureChartImageDir();
@@ -38,6 +39,7 @@ app.use("/api/presentations", presentationExportRoutes);
 app.use("/api/pptx-import", pptxImportRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/audit-log", auditLogRoutes);
 
 // Единый обработчик непойманных ошибок — чтобы стек не утекал клиенту.
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

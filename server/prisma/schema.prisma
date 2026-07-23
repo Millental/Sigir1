@@ -240,6 +240,11 @@ model AuditLogEntry {
   targetId   String?
   details    String?
   createdAt  DateTime @default(now())
+
+  @@index([createdAt, id])
+  @@index([action])
+  @@index([targetType])
+  @@index([userId])
 }
 
 model Notification {
