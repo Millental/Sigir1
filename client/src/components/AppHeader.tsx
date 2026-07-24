@@ -9,6 +9,8 @@ const adminLinks = [
   { to: "/review", label: "Проверка" },
   { to: "/presentation", label: "Презентация" },
   { to: "/audit-log", label: "Аудит" },
+  { to: "/users", label: "Пользователи" },
+  { to: "/departments", label: "Отделы" },
 ];
 
 const speakerLinks = [

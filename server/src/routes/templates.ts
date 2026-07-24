@@ -11,27 +11,103 @@ router.use(requireAuth);
 const includeFields = {
   fields: { orderBy: { order: "asc" as const } },
   blocks: { orderBy: { order: "asc" as const } },
+  assignedUsers: { include: { user: { select: { id: true, fullName: true } } } },
+  assignedDepartments: { include: { department: { select: { id: true, name: true } } } },
   _count: { select: { slides: true } },
 };
+
+// Видимость шаблонов для SPEAKER: общий (isShared), назначен лично, назначен его отделу,
+// либо вообще без единого назначения (трактуется как общий — сохраняет фактическое поведение
+// до введения назначений, без миграции существующих данных).
+async function speakerVisibilityWhere(userId: string): Promise<Prisma.TemplateWhereInput> {
+  const caller = await prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
+  const orConditions: Prisma.TemplateWhereInput[] = [
+    { isShared: true },
+    { assignedUsers: { some: { userId } } },
+    { AND: [{ assignedUsers: { none: {} } }, { assignedDepartments: { none: {} } }] },
+  ];
+  if (caller?.departmentId) {
+    orConditions.push({ assignedDepartments: { some: { departmentId: caller.departmentId } } });
+  }
+  return { OR: orConditions };
+}
+
+async function validateAssignmentIds(assignedUserIds: unknown, assignedDepartmentIds: unknown): Promise<string | null> {
+  if (assignedUserIds !== undefined) {
+    if (!Array.isArray(assignedUserIds) || assignedUserIds.some((id) => typeof id !== "string")) {
+      return "assignedUserIds должен быть массивом идентификаторов";
+    }
+    const uniqueIds = new Set(assignedUserIds as string[]);
+    const count = await prisma.user.count({ where: { id: { in: [...uniqueIds] } } });
+    if (count !== uniqueIds.size) {
+      return "Один или несколько выбранных пользователей не найдены";
+    }
+  }
+  if (assignedDepartmentIds !== undefined) {
+    if (!Array.isArray(assignedDepartmentIds) || assignedDepartmentIds.some((id) => typeof id !== "string")) {
+      return "assignedDepartmentIds должен быть массивом идентификаторов";
+    }
+    const uniqueIds = new Set(assignedDepartmentIds as string[]);
+    const count = await prisma.department.count({ where: { id: { in: [...uniqueIds] } } });
+    if (count !== uniqueIds.size) {
+      return "Один или несколько выбранных отделов не найдены";
+    }
+  }
+  return null;
+}
+
+// Назначения шаблона не имеют входящих ссылок (в отличие от TemplateField/TemplateBlock,
+// на которые ссылаются SlideFieldValue/SlideBlockValue) — поэтому при сохранении их проще и
+// безопаснее полностью перезаписывать, а не переносить по id.
+async function replaceAssignments(
+  tx: Prisma.TransactionClient,
+  templateId: string,
+  assignedUserIds: unknown,
+  assignedDepartmentIds: unknown
+) {
+  if (Array.isArray(assignedUserIds)) {
+    const uniqueUserIds = [...new Set(assignedUserIds as string[])];
+    await tx.templateUserAssignment.deleteMany({ where: { templateId } });
+    if (uniqueUserIds.length > 0) {
+      await tx.templateUserAssignment.createMany({
+        data: uniqueUserIds.map((userId) => ({ templateId, userId })),
+      });
+    }
+  }
+  if (Array.isArray(assignedDepartmentIds)) {
+    const uniqueDepartmentIds = [...new Set(assignedDepartmentIds as string[])];
+    await tx.templateDepartmentAssignment.deleteMany({ where: { templateId } });
+    if (uniqueDepartmentIds.length > 0) {
+      await tx.templateDepartmentAssignment.createMany({
+        data: uniqueDepartmentIds.map((departmentId) => ({ templateId, departmentId })),
+      });
+    }
+  }
+}
 
 const LAYOUT_KINDS = ["QUADRANT", "FINANCIAL_CHART", "SIMPLE_COLUMN"] as const;
 const BLOCK_TYPES = ["METRIC_TILE", "RICH_TEXT_SECTION", "TABLE", "FOOTER_STATS", "CHART_IMAGE"] as const;
 type LayoutKind = (typeof LAYOUT_KINDS)[number];
 type BlockType = (typeof BLOCK_TYPES)[number];
 
-router.get("/", async (_req, res) => {
-  const templates = await prisma.template.findMany({
-    include: includeFields,
-    orderBy: { name: "asc" },
-  });
+router.get("/", async (req, res) => {
+  if (req.user!.role === "ADMIN") {
+    const templates = await prisma.template.findMany({ include: includeFields, orderBy: { name: "asc" } });
+    return res.json(templates);
+  }
+  const where = await speakerVisibilityWhere(req.user!.userId);
+  const templates = await prisma.template.findMany({ where, include: includeFields, orderBy: { name: "asc" } });
   res.json(templates);
 });
 
 router.get("/:id", async (req, res) => {
-  const template = await prisma.template.findUnique({
-    where: { id: req.params.id },
-    include: includeFields,
-  });
+  if (req.user!.role === "ADMIN") {
+    const template = await prisma.template.findUnique({ where: { id: req.params.id }, include: includeFields });
+    if (!template) return res.status(404).json({ error: "Шаблон не найден" });
+    return res.json(template);
+  }
+  const where = await speakerVisibilityWhere(req.user!.userId);
+  const template = await prisma.template.findFirst({ where: { ...where, id: req.params.id }, include: includeFields });
   if (!template) return res.status(404).json({ error: "Шаблон не найден" });
   res.json(template);
 });
@@ -126,10 +202,21 @@ function validateBlocks(blocks: unknown): string | null {
 }
 
 router.post("/", requireRole("ADMIN"), async (req, res) => {
-  const { name, isShared, fields, layoutKind, blocks } = req.body ?? {};
+  const { name, isShared, fields, layoutKind, blocks, assignedUserIds, assignedDepartmentIds } = req.body ?? {};
   if (!name) {
     return res.status(400).json({ error: "Укажите название шаблона" });
   }
+
+  const assignmentError = await validateAssignmentIds(assignedUserIds, assignedDepartmentIds);
+  if (assignmentError) {
+    return res.status(400).json({ error: assignmentError });
+  }
+  // Дедуплицируем: assignedUserIds/assignedDepartmentIds образуют @@unique([templateId, ...Id]),
+  // повторяющийся id во входном массиве иначе упадёт на P2002 внутри транзакции без ответа клиенту.
+  const uniqueAssignedUserIds = Array.isArray(assignedUserIds) ? [...new Set(assignedUserIds as string[])] : assignedUserIds;
+  const uniqueAssignedDepartmentIds = Array.isArray(assignedDepartmentIds)
+    ? [...new Set(assignedDepartmentIds as string[])]
+    : assignedDepartmentIds;
 
   if (layoutKind !== undefined) {
     if (!LAYOUT_KINDS.includes(layoutKind as LayoutKind)) {
@@ -138,46 +225,60 @@ router.post("/", requireRole("ADMIN"), async (req, res) => {
     const blocksError = validateBlocks(blocks);
     if (blocksError) return res.status(400).json({ error: blocksError });
 
-    const template = await prisma.$transaction(async (tx) => {
-      const created = await tx.template.create({
-        data: {
-          name,
-          isShared: Boolean(isShared),
-          createdBy: req.user!.userId,
-          layoutKind: layoutKind as LayoutKind,
-          blocks: {
-            create: (blocks as BlockInput[]).map((b, i) => ({
-              blockType: b.blockType as BlockType,
-              label: b.label,
-              isRequired: Boolean(b.isRequired),
-              order: b.order ?? i,
-              config: b.blockType === "TABLE" ? { columns: b.config?.columns } : undefined,
-            })),
+    try {
+      const template = await prisma.$transaction(async (tx) => {
+        const created = await tx.template.create({
+          data: {
+            name,
+            isShared: Boolean(isShared),
+            createdBy: req.user!.userId,
+            layoutKind: layoutKind as LayoutKind,
+            blocks: {
+              create: (blocks as BlockInput[]).map((b, i) => ({
+                blockType: b.blockType as BlockType,
+                label: b.label,
+                isRequired: Boolean(b.isRequired),
+                order: b.order ?? i,
+                config: b.blockType === "TABLE" ? { columns: b.config?.columns } : undefined,
+              })),
+            },
+            ...(Array.isArray(uniqueAssignedUserIds)
+              ? { assignedUsers: { create: uniqueAssignedUserIds.map((userId) => ({ userId })) } }
+              : {}),
+            ...(Array.isArray(uniqueAssignedDepartmentIds)
+              ? { assignedDepartments: { create: uniqueAssignedDepartmentIds.map((departmentId) => ({ departmentId })) } }
+              : {}),
           },
-        },
-        include: includeFields,
+          include: includeFields,
+        });
+
+        await tx.templateVersion.create({
+          data: {
+            templateId: created.id,
+            versionNumber: 1,
+            name: created.name,
+            isShared: created.isShared,
+            layoutKind: created.layoutKind,
+            blocksSnapshot: blocksSnapshotOf(created.blocks) as Prisma.InputJsonValue,
+            changedBy: req.user!.userId,
+          },
+        });
+
+        return created;
       });
 
-      await tx.templateVersion.create({
-        data: {
-          templateId: created.id,
-          versionNumber: 1,
-          name: created.name,
-          isShared: created.isShared,
-          layoutKind: created.layoutKind,
-          blocksSnapshot: blocksSnapshotOf(created.blocks) as Prisma.InputJsonValue,
-          changedBy: req.user!.userId,
-        },
+      await prisma.auditLogEntry.create({
+        data: { userId: req.user!.userId, action: "TEMPLATE_CREATE", targetType: "Template", targetId: template.id },
       });
 
-      return created;
-    });
-
-    await prisma.auditLogEntry.create({
-      data: { userId: req.user!.userId, action: "TEMPLATE_CREATE", targetType: "Template", targetId: template.id },
-    });
-
-    return res.status(201).json(template);
+      return res.status(201).json(template);
+    } catch (err: any) {
+      if (err?.code === "P2002") {
+        return res.status(400).json({ error: "Назначение содержит повторяющиеся идентификаторы" });
+      }
+      console.error(err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
   }
 
   if (!Array.isArray(fields) || fields.length === 0) {
@@ -187,22 +288,29 @@ router.post("/", requireRole("ADMIN"), async (req, res) => {
     return res.status(400).json({ error: "У каждого поля должна быть подпись" });
   }
 
-  const template = await prisma.$transaction(async (tx) => {
-    const created = await tx.template.create({
-      data: {
-        name,
-        isShared: Boolean(isShared),
-        createdBy: req.user!.userId,
-        fields: {
-          create: (fields as FieldInput[]).map((f, i) => ({
-            label: f.label,
-            isRequired: Boolean(f.isRequired),
-            order: f.order ?? i,
-          })),
+  try {
+    const template = await prisma.$transaction(async (tx) => {
+      const created = await tx.template.create({
+        data: {
+          name,
+          isShared: Boolean(isShared),
+          createdBy: req.user!.userId,
+          fields: {
+            create: (fields as FieldInput[]).map((f, i) => ({
+              label: f.label,
+              isRequired: Boolean(f.isRequired),
+              order: f.order ?? i,
+            })),
+          },
+          ...(Array.isArray(uniqueAssignedUserIds)
+            ? { assignedUsers: { create: uniqueAssignedUserIds.map((userId) => ({ userId })) } }
+            : {}),
+          ...(Array.isArray(uniqueAssignedDepartmentIds)
+            ? { assignedDepartments: { create: uniqueAssignedDepartmentIds.map((departmentId) => ({ departmentId })) } }
+            : {}),
         },
-      },
-      include: includeFields,
-    });
+        include: includeFields,
+      });
 
     await tx.templateVersion.create({
       data: {
@@ -216,18 +324,25 @@ router.post("/", requireRole("ADMIN"), async (req, res) => {
       },
     });
 
-    return created;
-  });
+      return created;
+    });
 
-  await prisma.auditLogEntry.create({
-    data: { userId: req.user!.userId, action: "TEMPLATE_CREATE", targetType: "Template", targetId: template.id },
-  });
+    await prisma.auditLogEntry.create({
+      data: { userId: req.user!.userId, action: "TEMPLATE_CREATE", targetType: "Template", targetId: template.id },
+    });
 
-  res.status(201).json(template);
+    res.status(201).json(template);
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return res.status(400).json({ error: "Назначение содержит повторяющиеся идентификаторы" });
+    }
+    console.error(err);
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
+  }
 });
 
 router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
-  const { name, isShared, fields, blocks } = req.body ?? {};
+  const { name, isShared, fields, blocks, assignedUserIds, assignedDepartmentIds } = req.body ?? {};
   const templateId = req.params.id;
 
   const existing = await prisma.template.findUnique({
@@ -235,6 +350,11 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
     include: { fields: true, blocks: true },
   });
   if (!existing) return res.status(404).json({ error: "Шаблон не найден" });
+
+  const assignmentError = await validateAssignmentIds(assignedUserIds, assignedDepartmentIds);
+  if (assignmentError) {
+    return res.status(400).json({ error: assignmentError });
+  }
 
   try {
     if (existing.layoutKind === null) {
@@ -246,6 +366,8 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
             ...(isShared !== undefined ? { isShared: Boolean(isShared) } : {}),
           },
         });
+
+        await replaceAssignments(tx, templateId, assignedUserIds, assignedDepartmentIds);
 
         if (Array.isArray(fields)) {
           const incoming = fields as FieldInput[];
@@ -323,6 +445,8 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
         },
       });
 
+      await replaceAssignments(tx, templateId, assignedUserIds, assignedDepartmentIds);
+
       if (Array.isArray(blocks)) {
         const incoming = blocks as BlockInput[];
         const keepIds = new Set(incoming.filter((b) => b.id).map((b) => b.id));
@@ -394,6 +518,9 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
       return res
         .status(409)
         .json({ error: "Нельзя удалить поле/блок — по нему уже есть заполненные значения в слайдах" });
+    }
+    if (err?.code === "P2002") {
+      return res.status(400).json({ error: "Назначение содержит повторяющиеся идентификаторы" });
     }
     console.error(err);
     res.status(500).json({ error: "Внутренняя ошибка сервера" });

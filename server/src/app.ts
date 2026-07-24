@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/users";
+import departmentRoutes from "./routes/departments";
 import weeklyCycleRoutes from "./routes/weeklyCycles";
 import templateRoutes from "./routes/templates";
 import slideRoutes from "./routes/slides";
@@ -31,6 +32,7 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/departments", departmentRoutes);
 app.use("/api/weekly-cycles", weeklyCycleRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/slides", slideRoutes);

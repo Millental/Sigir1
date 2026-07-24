@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
-import { api, BlockType, LayoutKind, Template, TemplateVersionItem } from "../api/client";
+import { api, BlockType, Department, LayoutKind, Template, TemplateVersionItem, UserListItem } from "../api/client";
 
 interface FieldRow {
   id?: string;
@@ -81,6 +81,10 @@ export function TemplatesPage() {
   const [fields, setFields] = useState<FieldRow[]>([{ ...emptyField }]);
   const [layoutKind, setLayoutKind] = useState<LayoutKind>("SIMPLE_COLUMN");
   const [blocks, setBlocks] = useState<BlockRow[]>([{ ...emptyBlock }]);
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
+  const [assignedDepartmentIds, setAssignedDepartmentIds] = useState<string[]>([]);
+  const [speakers, setSpeakers] = useState<UserListItem[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [importProposals, setImportProposals] = useState<ImportProposal[] | null>(null);
@@ -93,7 +97,20 @@ export function TemplatesPage() {
 
   useEffect(() => {
     loadTemplates();
+    api
+      .listUsers()
+      .then((users) => setSpeakers(users.filter((u) => u.role === "SPEAKER")))
+      .catch(() => {});
+    api.listDepartments().then(setDepartments).catch(() => {});
   }, []);
+
+  function toggleAssignedUser(userId: string, checked: boolean) {
+    setAssignedUserIds((prev) => (checked ? [...prev, userId] : prev.filter((id) => id !== userId)));
+  }
+
+  function toggleAssignedDepartment(departmentId: string, checked: boolean) {
+    setAssignedDepartmentIds((prev) => (checked ? [...prev, departmentId] : prev.filter((id) => id !== departmentId)));
+  }
 
   function selectNew() {
     setSelectedId(null);
@@ -106,6 +123,8 @@ export function TemplatesPage() {
     setIsShared(false);
     setLayoutKind("SIMPLE_COLUMN");
     setBlocks([{ ...emptyBlock }]);
+    setAssignedUserIds([]);
+    setAssignedDepartmentIds([]);
     setError(null);
   }
 
@@ -118,6 +137,8 @@ export function TemplatesPage() {
     setVersions(null);
     setName(t.name);
     setIsShared(t.isShared);
+    setAssignedUserIds(t.assignedUsers.map((a) => a.userId));
+    setAssignedDepartmentIds(t.assignedDepartments.map((a) => a.departmentId));
     setError(null);
 
     if (t.layoutKind === null) {
@@ -206,6 +227,8 @@ export function TemplatesPage() {
     setSelectedFrozen(false);
     setName("");
     setIsShared(false);
+    setAssignedUserIds([]);
+    setAssignedDepartmentIds([]);
     setError(null);
     setLayoutKind(p.layoutKind);
     setBlocks(
@@ -239,10 +262,16 @@ export function TemplatesPage() {
           return;
         }
         const payload = fields.map((f, i) => ({ id: f.id, label: f.label.trim(), isRequired: f.isRequired, order: i }));
-        saved = await api.updateTemplate(selectedId!, { name, isShared, fields: payload });
+        saved = await api.updateTemplate(selectedId!, {
+          name,
+          isShared,
+          fields: payload,
+          assignedUserIds,
+          assignedDepartmentIds,
+        });
       } else if (selectedId && selectedFrozen) {
-        // Заморожен — состав блоков не отправляем вовсе.
-        saved = await api.updateBlockTemplate(selectedId, { name, isShared });
+        // Заморожен — состав блоков не отправляем вовсе, но назначения по-прежнему редактируемы.
+        saved = await api.updateBlockTemplate(selectedId, { name, isShared, assignedUserIds, assignedDepartmentIds });
       } else {
         if (blocks.length === 0 || blocks.some((b) => !b.label.trim())) {
           setError("Добавьте хотя бы один блок, у каждого блока должна быть подпись");
@@ -270,8 +299,21 @@ export function TemplatesPage() {
         }));
 
         saved = selectedId
-          ? await api.updateBlockTemplate(selectedId, { name, isShared, blocks: payload })
-          : await api.createBlockTemplate({ name, isShared, layoutKind, blocks: payload });
+          ? await api.updateBlockTemplate(selectedId, {
+              name,
+              isShared,
+              blocks: payload,
+              assignedUserIds,
+              assignedDepartmentIds,
+            })
+          : await api.createBlockTemplate({
+              name,
+              isShared,
+              layoutKind,
+              blocks: payload,
+              assignedUserIds,
+              assignedDepartmentIds,
+            });
       }
 
       loadTemplates();
@@ -298,6 +340,9 @@ export function TemplatesPage() {
                 >
                   {t.name} {t.isShared && <span className="badge">общий</span>}
                   {t.layoutKind === null && <span className="badge">легаси</span>}
+                  {(t.assignedUsers.length > 0 || t.assignedDepartments.length > 0) && (
+                    <span className="badge">назначен</span>
+                  )}
                 </button>
               </li>
             ))}
@@ -390,6 +435,44 @@ export function TemplatesPage() {
               <input type="checkbox" checked={isShared} onChange={(e) => setIsShared(e.target.checked)} />
               Общий шаблон (виден всем спикерам)
             </label>
+          </div>
+
+          <div className="template-fields">
+            <label>Назначить конкретным спикерам</label>
+            <div className="checkbox-list">
+              {speakers.length === 0 && <p className="hint-text">Спикеров нет</p>}
+              {speakers.map((u) => (
+                <label key={u.id}>
+                  <input
+                    type="checkbox"
+                    checked={assignedUserIds.includes(u.id)}
+                    onChange={(e) => toggleAssignedUser(u.id, e.target.checked)}
+                  />
+                  {u.fullName}
+                </label>
+              ))}
+            </div>
+
+            <label>Назначить отделам</label>
+            <div className="checkbox-list">
+              {departments.length === 0 && <p className="hint-text">Отделов нет</p>}
+              {departments.map((d) => (
+                <label key={d.id}>
+                  <input
+                    type="checkbox"
+                    checked={assignedDepartmentIds.includes(d.id)}
+                    onChange={(e) => toggleAssignedDepartment(d.id, e.target.checked)}
+                  />
+                  {d.name}
+                </label>
+              ))}
+            </div>
+            {assignedUserIds.length === 0 && assignedDepartmentIds.length === 0 && !isShared && (
+              <p className="hint-text">
+                Без назначений и без флага «общий» шаблон всё равно виден всем спикерам (пока нет ни одного
+                назначения).
+              </p>
+            )}
           </div>
 
           {!isBlockForm && (

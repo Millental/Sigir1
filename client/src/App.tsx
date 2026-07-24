@@ -8,6 +8,8 @@ import { ReviewPage } from "./pages/ReviewPage";
 import { AssemblePage } from "./pages/AssemblePage";
 import { PrintPage } from "./pages/PrintPage";
 import { AuditLogPage } from "./pages/AuditLogPage";
+import { UsersPage } from "./pages/UsersPage";
+import { DepartmentsPage } from "./pages/DepartmentsPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export function App() {
@@ -67,6 +69,22 @@ export function App() {
         element={
           <ProtectedRoute role="ADMIN">
             <AuditLogPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/departments"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <DepartmentsPage />
           </ProtectedRoute>
         }
       />

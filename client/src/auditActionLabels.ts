@@ -10,6 +10,10 @@ export const auditActionLabels: Record<string, string> = {
   USER_CREATE: "Создание пользователя",
   USER_UPDATE: "Изменение пользователя",
   USER_PASSWORD_RESET: "Сброс пароля",
+  USER_DELETE: "Удаление пользователя",
+  DEPARTMENT_CREATE: "Создание отдела",
+  DEPARTMENT_UPDATE: "Изменение отдела",
+  DEPARTMENT_DELETE: "Удаление отдела",
   SLIDE_CREATE: "Создание слайда",
   SLIDE_SUBMIT: "Отправка слайда",
   SLIDE_APPROVE: "Утверждение слайда",
@@ -37,6 +41,7 @@ export const auditTargetTypeLabels: Record<string, string> = {
   Slide: "Слайд",
   Presentation: "Презентация",
   Notification: "Уведомление",
+  Department: "Отдел",
 };
 
 export function auditTargetTypeLabel(targetType: string | null): string {

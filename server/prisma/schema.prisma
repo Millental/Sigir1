@@ -59,10 +59,24 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  templates     Template[]      @relation("TemplateOwner")
-  slides        Slide[]
-  auditEntries  AuditLogEntry[]
-  notifications Notification[]
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  templates           Template[]                @relation("TemplateOwner")
+  slides              Slide[]
+  auditEntries        AuditLogEntry[]
+  notifications       Notification[]
+  templateAssignments TemplateUserAssignment[]
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users               User[]
+  templateAssignments TemplateDepartmentAssignment[]
 }
 
 model Template {
@@ -76,10 +90,34 @@ model Template {
   updatedAt  DateTime    @updatedAt
   layoutKind LayoutKind?
 
-  fields   TemplateField[]
-  blocks   TemplateBlock[]
-  slides   Slide[]
-  versions TemplateVersion[]
+  fields              TemplateField[]
+  blocks              TemplateBlock[]
+  slides              Slide[]
+  versions            TemplateVersion[]
+  assignedUsers       TemplateUserAssignment[]
+  assignedDepartments TemplateDepartmentAssignment[]
+}
+
+model TemplateUserAssignment {
+  id         String   @id @default(uuid())
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([templateId, userId])
+}
+
+model TemplateDepartmentAssignment {
+  id           String     @id @default(uuid())
+  templateId   String
+  template     Template   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([templateId, departmentId])
 }
 
 model TemplateVersion {

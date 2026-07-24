@@ -62,6 +62,8 @@ export interface Template {
   fields: TemplateField[];
   layoutKind: LayoutKind | null;
   blocks: TemplateBlock[];
+  assignedUsers: Array<{ userId: string; user: { id: string; fullName: string } }>;
+  assignedDepartments: Array<{ departmentId: string; department: { id: string; name: string } }>;
   _count?: { slides: number };
 }
 
@@ -183,6 +185,16 @@ export interface UserListItem {
   role: "ADMIN" | "SPEAKER";
   isActive: boolean;
   createdAt: string;
+  departmentId: string | null;
+  department: { id: string; name: string } | null;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { users: number };
 }
 
 export interface AuditLogItem {
@@ -217,8 +229,22 @@ export const api = {
   logout: () => request("/auth/logout", { method: "POST" }),
   me: (): Promise<CurrentUser> => request("/auth/me"),
   listUsers: (): Promise<UserListItem[]> => request("/users"),
-  createUser: (data: { fullName: string; login: string; role: "ADMIN" | "SPEAKER" }) =>
+  createUser: (data: { fullName: string; login: string; role: "ADMIN" | "SPEAKER"; departmentId?: string | null }) =>
     request("/users", { method: "POST", body: JSON.stringify(data) }),
+  updateUser: (
+    id: string,
+    data: Partial<{ fullName: string; role: "ADMIN" | "SPEAKER"; isActive: boolean; departmentId: string | null }>
+  ): Promise<UserListItem> => request(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteUser: (id: string): Promise<{ id: string }> => request(`/users/${id}`, { method: "DELETE" }),
+  resetUserPassword: (id: string): Promise<{ tempPassword: string }> =>
+    request(`/users/${id}/reset-password`, { method: "POST" }),
+
+  listDepartments: (): Promise<Department[]> => request("/departments"),
+  createDepartment: (name: string): Promise<Department> =>
+    request("/departments", { method: "POST", body: JSON.stringify({ name }) }),
+  updateDepartment: (id: string, name: string): Promise<Department> =>
+    request(`/departments/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  deleteDepartment: (id: string): Promise<{ id: string }> => request(`/departments/${id}`, { method: "DELETE" }),
 
   listTemplates: (): Promise<Template[]> => request("/templates"),
   getTemplate: (id: string): Promise<Template> => request(`/templates/${id}`),
@@ -226,12 +252,16 @@ export const api = {
     name: string;
     isShared: boolean;
     fields: Array<{ label: string; isRequired: boolean; order: number }>;
+    assignedUserIds?: string[];
+    assignedDepartmentIds?: string[];
   }): Promise<Template> => request("/templates", { method: "POST", body: JSON.stringify(data) }),
   createBlockTemplate: (data: {
     name: string;
     isShared: boolean;
     layoutKind: LayoutKind;
     blocks: Array<{ blockType: BlockType; label: string; isRequired: boolean; order: number; config?: { columns?: string[] } }>;
+    assignedUserIds?: string[];
+    assignedDepartmentIds?: string[];
   }): Promise<Template> => request("/templates", { method: "POST", body: JSON.stringify(data) }),
   updateTemplate: (
     id: string,
@@ -239,6 +269,8 @@ export const api = {
       name?: string;
       isShared?: boolean;
       fields?: Array<{ id?: string; label: string; isRequired: boolean; order: number }>;
+      assignedUserIds?: string[];
+      assignedDepartmentIds?: string[];
     }
   ): Promise<Template> => request(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   updateBlockTemplate: (
@@ -254,6 +286,8 @@ export const api = {
         order: number;
         config?: { columns?: string[] };
       }>;
+      assignedUserIds?: string[];
+      assignedDepartmentIds?: string[];
     }
   ): Promise<Template> => request(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
