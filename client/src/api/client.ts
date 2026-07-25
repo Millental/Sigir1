@@ -131,6 +131,7 @@ export type NotificationTypeName =
   | "CYCLE_ASSEMBLED"
   | "CYCLE_ARCHIVED"
   | "CYCLE_DISASSEMBLED"
+  | "ADMIN_REMINDER"
   | "DEADLINE_APPROACHING"
   | "NEEDS_REVISION"
   | "ALL_SUBMITTED";
@@ -299,8 +300,11 @@ export const api = {
     data: Partial<Pick<WeeklyCycle, "weekLabel" | "startDate" | "endDate" | "deadline">>
   ): Promise<WeeklyCycle> => request(`/weekly-cycles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   archiveCycle: (id: string): Promise<WeeklyCycle> => request(`/weekly-cycles/${id}/archive`, { method: "POST" }),
+  unarchiveCycle: (id: string): Promise<WeeklyCycle> => request(`/weekly-cycles/${id}/unarchive`, { method: "POST" }),
   disassembleCycle: (id: string): Promise<WeeklyCycle> =>
     request(`/presentations/cycle/${id}/disassemble`, { method: "POST" }),
+  sendCycleReminder: (id: string, data: { recipientIds: string[]; message?: string }): Promise<{ sent: number }> =>
+    request(`/weekly-cycles/${id}/send-reminder`, { method: "POST", body: JSON.stringify(data) }),
 
   getOrCreateSlide: (weeklyCycleId: string, templateId: string): Promise<Slide> =>
     request("/slides", { method: "POST", body: JSON.stringify({ weeklyCycleId, templateId }) }),

@@ -7,6 +7,8 @@ export const auditActionLabels: Record<string, string> = {
   CYCLE_CREATE: "Создание цикла",
   CYCLE_UPDATE: "Изменение цикла",
   CYCLE_ARCHIVE: "Архивирование цикла",
+  CYCLE_UNARCHIVE: "Разархивирование цикла",
+  CYCLE_SEND_REMINDER: "Отправка напоминания спикерам",
   USER_CREATE: "Создание пользователя",
   USER_UPDATE: "Изменение пользователя",
   USER_PASSWORD_RESET: "Сброс пароля",

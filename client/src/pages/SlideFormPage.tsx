@@ -62,6 +62,13 @@ export function SlideFormPage() {
     [selectedTemplate, isBlockTemplate]
   );
 
+  const missingRequiredCount = useMemo(() => {
+    if (isBlockTemplate) {
+      return sortedBlocks.filter((b) => b.isRequired && isBlockEmpty(b.blockType, blockValues[b.id])).length;
+    }
+    return sortedFields.filter((f) => f.isRequired && !values[f.id]?.trim()).length;
+  }, [isBlockTemplate, sortedBlocks, sortedFields, blockValues, values]);
+
   async function handleSave() {
     if (!slide) return;
     setSaving(true);
@@ -202,9 +209,12 @@ export function SlideFormPage() {
               <button className="primary" onClick={handleSave} disabled={saving}>
                 {saving ? "Сохраняем…" : "Сохранить"}
               </button>{" "}
-              <button className="secondary" onClick={handleSubmit} disabled={submitting}>
+              <button className="secondary" onClick={handleSubmit} disabled={submitting || missingRequiredCount > 0}>
                 {submitting ? "Отправляем…" : "Отправить на проверку"}
               </button>
+              {missingRequiredCount > 0 && (
+                <span className="hint-text"> Заполните обязательные поля ({missingRequiredCount})</span>
+              )}
               {saved && <span className="saved-hint"> Сохранено</span>}
             </>
           )}

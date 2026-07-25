@@ -47,6 +47,7 @@ enum NotificationType {
   CYCLE_ASSEMBLED
   CYCLE_ARCHIVED
   CYCLE_DISASSEMBLED
+  ADMIN_REMINDER
 }
 
 model User {

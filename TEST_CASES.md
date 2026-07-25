@@ -625,7 +625,154 @@ CyclesPage.tsx`, `case "CYCLE_DISASSEMBLED"` в `client/src/components/Notificat
 
 ---
 
+### Стабилизация Вехи 1 — регресс + новый код (Этап 13)
+
+Префикс `TC-P13-*` — финальный регресс Вехи 1. Новый код этапа: `server/src/utils/slideRequired.ts`
+(+ `POST /api/slides/:id/submit` — FR-SLD-03), `server/src/routes/weeklyCycles.ts`
+(`POST /:id/unarchive`, `POST /:id/send-reminder` — FR-NTF-01), клиент
+(`client/src/pages/SlideFormPage.tsx` дизейбл кнопки, `client/src/pages/CyclesPage.tsx` «Из архива»/
+«Напомнить спикерам», `client/src/components/NotificationBell.tsx` роутинг `ADMIN_REMINDER`),
+миграция `20260725130103_add_admin_reminder_notification`. Плюс сквозной межэтапный сценарий,
+свежая установка «с нуля» и чек-лист по 44 FR-кодам. Прогон — 2026-07-25, 0 дефектов (см. лог).
+
+| ID | Название | Категория | Предусловия | Шаги | Ожидаемый результат |
+|---|---|---|---|---|---|
+| TC-P13-01 | **FR-SLD-03 сервер, field-шаблон: submit слайда с пустым обязательным полем** | negative/integration | SPEAKER, шаблон с 1 required + 1 optional полем, слайд-черновик | `POST /slides/:id/submit` при пустом required | 400 `{error, missing:[{kind:"field", id, label}]}`, ровно 1 элемент — required-поле |
+| TC-P13-02 | FR-SLD-03 сервер, field: заполнено только необязательное поле | negative/integration | То же | `PATCH` optional → `submit` | 400, `missing.length===1` (required всё ещё пусто) |
+| TC-P13-03 | FR-SLD-03 сервер, field: required заполнено только пробелами (trim) | negative/integration | То же | `PATCH {value:"    "}` → `submit` | 400 (правило `.trim()` совпадает с клиентом) |
+| TC-P13-04 | FR-SLD-03 сервер, field: required заполнено реально → успех | positive/integration | То же | `PATCH` real value → `submit` | 200, `status==="SUBMITTED"` |
+| TC-P13-05 | **FR-SLD-03 сервер, block-шаблон: submit с 5 пустыми required-блоками всех типов** | negative/integration | SPEAKER, block-шаблон (`METRIC_TILE`/`RICH_TEXT_SECTION`/`TABLE`/`FOOTER_STATS`/`CHART_IMAGE` — все required) | `submit` пустого слайда | 400, `missing.length===5`, каждый `kind==="block"` |
+| TC-P13-06 | FR-SLD-03 сервер, block: правила пустоты по типам | negative/integration | То же | Поочерёдно заполнять: `METRIC_TILE.value`, `RICH_TEXT.text`, `FOOTER_STATS.text`, `TABLE.rows` | `METRIC_TILE` пробелы → пусто; `TABLE {rows:[]}` → пусто, `{rows:[[..]]}` → заполнено; счётчик `missing` уменьшается корректно |
+| TC-P13-07 | FR-SLD-03 сервер, block: `CHART_IMAGE` нельзя заполнить через `PATCH`, только загрузкой | negative/integration | Слайд с required `CHART_IMAGE` | `PATCH {value:{path:"fake"}}` | 400 «Изображение меняется отдельным запросом» |
+| TC-P13-08 | FR-SLD-03 сервер, block: после загрузки картинки и заполнения всех → успех | positive/integration | То же, загружен PNG в `CHART_IMAGE` | multipart upload → `submit` | upload 200, `submit` 200 `SUBMITTED` |
+| TC-P13-09 | **FR-SLD-03 клиент: кнопка «Отправить на проверку» задизейблена при пустом required** | positive/e2e | SPEAKER, `/slides?cycle&template` (required поле пусто) | Открыть форму | Кнопка `disabled`, виден хинт «Заполните обязательные поля (N)» |
+| TC-P13-10 | FR-SLD-03 клиент: кнопка активируется после заполнения required | positive/e2e | То же | Заполнить поле → «Сохранить» | Кнопка становится активной |
+| TC-P13-11 | **Разархивирование: `ARCHIVED → ASSEMBLED` (нормальный путь)** | positive/integration | ADMIN, цикл ARCHIVED (презентация на месте) | `POST /weekly-cycles/:id/unarchive` | 200, `status==="ASSEMBLED"`, презентация цела (`slides.length>=1`) |
+| TC-P13-12 | Разархивирование: 409 из не-ARCHIVED (COLLECTING/ASSEMBLED) | negative/integration | ADMIN, цикл COLLECTING и цикл ASSEMBLED | `POST .../unarchive` | 409 в обоих случаях |
+| TC-P13-13 | Разархивирование: 403 для SPEAKER, 404 несуществующий | negative/integration | SPEAKER; несуществующий id | `POST .../unarchive` | 403 / 404 |
+| TC-P13-14 | **Разархивирование: self-heal ветка — ARCHIVED без `Presentation` → COLLECTING** | positive(edge)/integration | Цикл ARCHIVED, строка `Presentation` удалена напрямую (симуляция рассинхрона) | `POST .../unarchive` | 200, `status==="COLLECTING"` (не 409, не заморозка), аудит `CYCLE_UNARCHIVE` записан |
+| TC-P13-15 | Разархивирование: гонка (2 параллельных `unarchive`) | positive(race)/integration | ADMIN, цикл ARCHIVED | `Promise.all([unarchive, unarchive])` | Нет 500/deadlock; финал `ASSEMBLED` (идемпотентно). Наблюдение: не атомарно-гейтировано (в отличие от disassemble) → 2 аудит-записи `CYCLE_UNARCHIVE` — косметический дубль, не дефект (переход неразрушающий) |
+| TC-P13-16 | Разархивирование: UI-кнопка «Из архива» на ARCHIVED-строке `CyclesPage`, без confirm-диалога | positive/e2e | ADMIN, `/cycles`, ARCHIVED-строка | Клик «Из архива» | Кнопка есть только у ARCHIVED; клик → строка «Собран», сразу, без модалки (соответствует зафиксированному решению) |
+| TC-P13-17 | **FR-NTF-01: рассылка напоминания — happy path** | positive/integration | ADMIN, COLLECTING-цикл, активный SPEAKER | `POST /weekly-cycles/:id/send-reminder {recipientIds:[spId], message?}` | 201 `{sent:1}`, у SPEAKER появляется `ADMIN_REMINDER` с читаемым текстом, `weeklyCycleId` присутствует, `templateId===null` |
+| TC-P13-18 | FR-NTF-01: 403 SPEAKER / 409 не-COLLECTING / 404 несуществующий цикл | negative/integration | Разные роли/статусы | `POST .../send-reminder` | 403 / 409 «только по циклу в статусе Сбор» / 404 |
+| TC-P13-19 | FR-NTF-01: валидация тела — пустой/не-массив `recipientIds`, нестроковые элементы, нестроковый `message` | negative/integration | ADMIN, COLLECTING-цикл | `{recipientIds:[]}` / `"nope"` / `[123,null]` / `{message:123}` | 400 во всех случаях |
+| TC-P13-20 | **FR-NTF-01: фильтрация получателей — микс валидных/невалидных id** | positive(edge)/integration | ADMIN, 1 активный SPEAKER + admin id + неактивный SPEAKER + мусорный uuid | `send-reminder {recipientIds:[все]}` | 201 `{sent:1}` — молча отброшены admin/неактивный/мусор |
+| TC-P13-21 | FR-NTF-01: 0 валидных после фильтра → 400 | negative/integration | ADMIN | `recipientIds:[adminId]` и отдельно `[inactiveSpeakerId]` | 400 «Среди получателей нет активных спикеров» |
+| TC-P13-22 | FR-NTF-01: гонка (2 параллельных send-reminder) | positive(race)/integration | ADMIN, COLLECTING-цикл | `Promise.all([send, send])` | Нет 500 (201/201) |
+| TC-P13-23 | **FR-NTF-01 UI: панель «Напомнить спикерам» — все активные спикеры pre-checked + поле сообщения** | positive/e2e | ADMIN, `/cycles`, COLLECTING-строка | Клик «Напомнить спикерам» | Панель открыта, ВСЕ чекбоксы спикеров отмечены по умолчанию, есть `textarea` сообщения; отправка → «Напоминание отправлено: N» |
+| TC-P13-24 | FR-NTF-01 UI: получатель видит напоминание в колокольчике, читаемый русский, без mojibake | positive/e2e | SPEAKER-получатель | Клик по `notification-bell-trigger` | В выпадашке текст «Напоминание от администратора…» + кастомное сообщение, ни одного `U+FFFD` |
+| TC-P13-25 | **Mojibake-фикс: имя шаблона «Отчёт по проекту» отображается корректно** | positive/e2e | ADMIN, `/templates` | Открыть список шаблонов | Имя «Отчёт по проекту» рендерится, ни одного `U+FFFD` на странице |
+| TC-P13-26 | **Сквозной межэтапный жизненный цикл на одних данных (стыки 2→12→7→3→4→6→8→9→5а→13→10→11)** | positive/integration(e2e-chain) | ADMIN + SPEAKER, свежие сущности | создание цикла+дедлайн → block-шаблон назначен лично спикеру → спикер заполняет + грузит картинку → submit → admin request_revision с комментарием → спикер правит → resubmit → admin add slide + placeholder → PDF-экспорт → CYCLE_ASSEMBLED-уведомление владельцу → disassemble → reassemble → archive → unarchive → история значений → версии шаблона → аудит-лог всех действий | Все шаги проходят; спикер видит назначенный не-shared шаблон; PDF — реальный `%PDF-` (~40 КБ); владелец получает NEEDS_REVISION с комментарием и CYCLE_ASSEMBLED; disassemble → слайд SUBMITTED (косвенно подтверждён успешной пересборкой); история хранит смену `METRIC_TILE` и картинки; аудит содержит все 12 экшенов (disassemble = `PRESENTATION_DISASSEMBLE` c `details`) |
+| TC-P13-27 | Stage 3 регресс: `approve` пишет `SLIDE_APPROVE`, но НЕ меняет статус (нет отдельного «Принято») | positive(regression)/integration | ADMIN, SUBMITTED-слайд | `PATCH /slides/:id/review {action:"approve"}` | 200, `status` остаётся `SUBMITTED`, аудит `SLIDE_APPROVE` записан |
+| TC-P13-28 | Stage 3 регресс(neg): повторный submit уже отправленного слайда | negative/integration | SPEAKER, SUBMITTED-слайд | `POST /slides/:id/submit` | 403 «Слайд уже отправлен на проверку» |
+| TC-P13-29 | EXP-02 регресс: экспорт одиночного слайда презентации в PDF | positive/integration | ADMIN, собранная презентация со слайдом-слотом | `GET /presentations/slots/:slotId/export.pdf` | 200, тело — реальный `%PDF-` |
+| TC-P13-30 | **Свежая установка «с нуля»: миграции + seed на пустой БД** | positive/integration(install) | Пустая throwaway-БД, `DATABASE_URL`-override (боевой `.env` не трогается) | `prisma migrate deploy` → `npm run seed` → старт сервера на отдельном порту → login | Все 11 миграций применены; seed создаёт 1 ADMIN («Администратор системы»); 20 public-таблиц; реальный `POST /api/auth/login admin/ChangeMe123!` → 200. Throwaway-БД затем удалена, `.env` цел |
+| TC-P13-31 | Регресс: `ConfirmModal` по-прежнему только в hard-delete пользователя; новые деструктивные экшены (archive/unarchive/disassemble/reminder) — без confirm | positive(regression)/code-review | — | `grep -rn ConfirmModal client/src` + чтение `CyclesPage.tsx` | Единственный потребитель — `UsersPage.tsx`; `CyclesPage` не импортирует `ConfirmModal`/`confirm()` (соответствует зафиксированному UX-инварианту) |
+| TC-P13-32 | Stage 12 регресс: спикер видит лично назначенный не-shared шаблон (TPL-03/05) | positive/integration | SPEAKER с личным назначением на `isShared:false` шаблон | `GET /templates` от спикера | Шаблон присутствует в списке |
+| TC-P13-33 | `npx tsc --noEmit` в `server/` и `client/` после нового кода Этапа 13 | unit | — | `tsc --noEmit` × 2 | Чисто на обеих сторонах |
+
+---
+
 ## Лог прогонов
+
+### 2026-07-25 — Финальный регресс Вехи 1 (Этап 13): новый код + сквозной сценарий + свежая установка + чек-лист 44 FR — 0 дефектов
+
+**Что проверялось:** гибридный финальный проход (по методике из `REQUIREMENTS.md`, Этап 13, раздел A),
+а не поимённый перегон всех `TC-*`. Три пласта: (1) первичное состязательное тестирование 4 новых
+изменений кода этой сессии (FR-SLD-03 серверная+клиентская валидация, разархивирование, FR-NTF-01
+admin-рассылка, mojibake-фикс); (2) один длинный межэтапный сценарий на одних данных, пересекающий
+стыки, которые поэтапные прогоны никогда не связывали; (3) свежая установка «с нуля» на пустой БД.
+Инструменты: Node/fetch API-харнесс (`h.mjs` + 6 скриптов), Playwright 1.61.1 (`playwright-core`,
+кэш chromium-1228), `tsc --noEmit`. Серверы поднимались тестером: `server` 4000, `client`
+`vite --host 127.0.0.1` 5173, `CLIENT_ORIGIN=http://127.0.0.1:5173` (уже в `.env`).
+
+**Прогнано (все PASS):**
+- **FR-SLD-03** (`TC-P13-01..10`) — 25 API-проверок: field-путь и block-путь `findMissingRequired`
+  раздельно, все 5 `BlockType` на правила пустоты (`METRIC_TILE`/`RICH_TEXT_SECTION`/`TABLE`/
+  `FOOTER_STATS`/`CHART_IMAGE`), trim-правила совпадают клиент↔сервер, `CHART_IMAGE` заполняется
+  только загрузкой (не `PATCH`), сырой `POST /submit` в обход клиента корректно получает 400 с
+  массивом `missing`. Клиент (`TC-P13-09/10`, Playwright): кнопка «Отправить на проверку`
+  реально `disabled` при пустом required + хинт-счётчик, активируется после заполнения.
+- **Разархивирование** (`TC-P13-11..16`) — нормальный `ARCHIVED→ASSEMBLED` (презентация цела),
+  409 из COLLECTING/ASSEMBLED, 403 SPEAKER, 404, **self-heal-ветка** (ARCHIVED без `Presentation`
+  напрямую в БД → `COLLECTING`, не заморозка), гонка (идемпотентно, без 500), UI-кнопка «Из архива»
+  без confirm-диалога.
+- **FR-NTF-01 admin-рассылка** (`TC-P13-17..24`) — happy path (201 `{sent}`, `ADMIN_REMINDER` у
+  получателя, `weeklyCycleId` есть, `templateId===null` не роняет `NotificationBell.targetUrl`),
+  403/409/404, валидация тела, **фильтрация микса валидных/невалидных** (admin-id/неактивный/мусор
+  молча отброшены), 0 валидных → 400 «нет активных спикеров», гонка без 500. UI (Playwright):
+  панель с **всеми активными спикерами pre-checked** (подтверждено — соответствует явному решению
+  пользователя, не «только несдавшие»), поле сообщения, получатель видит читаемый русский текст
+  в колокольчике **без mojibake** (подтверждено через реальный браузер — прежний артефакт был
+  чисто shell-кодировкой `curl`, в тракте запрос/ответ проблемы нет).
+- **Mojibake-фикс** (`TC-P13-25`) — «Отчёт по проекту» рендерится корректно на `/templates`, ни
+  одного `U+FFFD`.
+- **Сквозной межэтапный сценарий** (`TC-P13-26`) — полный круг 2→12→7→3→4→6→8→9→5а→13→10→11 на
+  одном цикле/слайде: назначение шаблона лично спикеру → заполнение + загрузка картинки → submit →
+  доработка с комментарием → resubmit → сборка со слайдом + ручной заглушкой → PDF-экспорт
+  (реальный `%PDF-`, ~40 КБ) → CYCLE_ASSEMBLED владельцу → разборка → пересборка → архивация →
+  **разархивирование** → история значений (смена `METRIC_TILE` + картинки) → версии шаблона →
+  аудит-лог всех 12 экшенов. EXP-02 одиночный слайд-PDF (`TC-P13-29`) тоже реальный `%PDF-`.
+- **Свежая установка** (`TC-P13-30`) — **подтверждена**: на пустой throwaway-БД
+  `weekly_report_fresh13` (создана/удалена в рамках прогона, боевой `.env` не менялся —
+  `DATABASE_URL` переопределялся только в shell, `dotenv` его не перекрывает) `prisma migrate deploy`
+  применил все 11 миграций, `npm run seed` создал единственного ADMIN, отдельный сервер на :4001
+  принял реальный `login admin/ChangeMe123!` → 200. Throwaway-БД удалена, dev-сервер :4000 жив.
+- **Прицельные перепроверки отложенного (раздел E)** — `approve` не меняет статус SUBMITTED
+  (`TC-P13-27`), повторный submit → 403 (`TC-P13-28`), `ConfirmModal` только в hard-delete
+  (`TC-P13-31`), видимость лично назначенного не-shared шаблона (`TC-P13-32`). `tsc --noEmit` чист
+  на обеих сторонах (`TC-P13-33`).
+
+**Дефекты:** не найдено. Два «FAIL» в черновых прогонах харнесса оказались багами тест-скрипта, а
+не продукта: (а) `GET /presentations/cycle/:id` возвращает `{weeklyCycle, presentation,
+candidateSlides}` — слайды лежат в `presentation.slides`, не в корне (презентация после
+разархивирования цела, перепроверено); (б) экшен разборки в аудите называется
+`PRESENTATION_DISASSEMBLE` (а `CYCLE_DISASSEMBLED` — это тип уведомления), и `GET /slides/:id`
+owner-only (ADMIN получает 404) — переход слайда в SUBMITTED после disassemble косвенно доказан
+успешной пересборкой (она требует статуса SUBMITTED). Оба скорректированы и перепроверены.
+
+**Наблюдения (не дефекты):**
+- **Панель напоминаний со всеми 250 QA-спикерами pre-checked** — при накопленных тестовых данных
+  список чекбоксов очень длинный (все 250 отмечены по умолчанию). Функционально верно и
+  соответствует решению, но на реальном объёме спикеров панель стоит держать в поле зрения UX
+  (прокрутка/поиск). Для пилота на свежей БД неактуально.
+- **Разархивирование не атомарно-гейтировано** (в отличие от disassemble с `FOR UPDATE`): гонка из
+  двух `unarchive` пишет 2 записи `CYCLE_UNARCHIVE`. Переход неразрушающий и идемпотентный, дубль
+  чисто косметический в аудите — не заводил как дефект.
+
+**Чек-лист по 44 FR-кодам SRS** (источник — матрица `REQUIREMENTS.md`, Этап 13, раздел D; отмечено,
+что перепроверено на этом прогоне vs принято на веру по матрице аналитика + историческим
+`tester`-прогонам):
+- **Перепроверено прямо на этом прогоне (демонстрируемо работает):** AUTH-01/02/03 (login
+  admin+speaker, роли), USR-01/02/03/04 (создание/правка/деактивация/сброс пароля), TPL-01/02
+  (field+block шаблоны), TPL-03/05 (личное назначение + видимость не-shared), TPL-04/VER-02/VER-04
+  (история версий/значений), SLD-01/02/04/06 (создание/заполнение/значения), **SLD-03 (новый фикс —
+  полностью)**, SLD-05/VAL-01/02/03/04 (submit/доработка с комментарием/статусы/повторное
+  проведение), VIEW-03/04 (агрегированная презентация, admin видит всё), ASM-03/04/05 (сборка/
+  разборка/пересборка), ASM-06 (ручной порядок — эндпоинт есть; в сценарии добавлены слайд+заглушка),
+  VER-01/VER-05 (архив/разархив-цикл), EXP-01/EXP-02 (PDF презентации и одиночного слайда),
+  **NTF-01 (новая функция — полностью)**, NTF-02 (колокольчик с непрочитанными).
+- **Принято на веру (закрыто ранее, в этом проходе точечно не воспроизводилось):** AUTH-04/05
+  (временный пароль «показывается один раз» — механизм задействован при создании спикеров, но сам
+  сброс-в-Вехе-2 не тестировался), USR-05 (сохранность истории при удалении — покрыто прогоном
+  Этапа 12), VIEW-01/02 (спикер видит свои/чужие в рамках прав — базово затронуто, но матрица прав
+  целиком не переигрывалась). **FR-ASM-01/02** — согласованное отклонение (ручная сборка/заглушка),
+  кода не требуют, закрываются документацией.
+
+**Итог: 41/44 FR закрыты и в значительной части перепроверены сейчас; 3 (ASM-01/02 + буквальная
+трактовка) — согласованные отклонения по решению заказчика. Новый код Этапа 13 (SLD-03, NTF-01,
+разархивирование, mojibake) прошёл первичное состязательное тестирование без дефектов. Свежая
+установка воспроизводима.**
+
+**Тестовые данные, оставшиеся в dev-БД `weekly_report`** (не удалялись — по конвенции проекта;
+пилот идёт на свежей БД, так что чистка вне объёма): спикеры `qa.speaker.p13.*`,
+`qa.speaker.p13b.*`, `qa.speaker.p13inact.*` (неактивный), `qa.speaker.p13pw.*`,
+`qa.speaker.p13life.*`, `qa.speaker.p13appr.*`, `qa.speaker.p13race.*`; циклы с меткой `QA-P13`
+(`SLD03`, `COLLECT`, `LIFE`, `SELFHEAL`, `ARCH`, `LIFECYCLE`, `APPR`, `RACE`/`RACE2`); шаблоны
+`QA-P13 *`; строки `Notification` типа `ADMIN_REMINDER` у нескольких спикеров; несколько загруженных
+PNG в `server/uploads/chart-images/`. Throwaway-БД `weekly_report_fresh13` создана и **удалена** в
+рамках проверки свежей установки — в системе не осталась. Скриншоты Playwright:
+`scratchpad/{reminder_panel,cycles_after_unarchive,sld03_disabled,sld03_enabled,speaker_bell}.png`.
 
 ### 2026-07-24 — Независимая проверка Этапа 12 (администрирование пользователей + отделы + назначение шаблонов) — найдено 4 реальных дефекта + 1 находка
 

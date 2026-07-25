@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppHeader } from "../components/AppHeader";
-import { api, WeeklyCycle, WeeklyCycleStatus } from "../api/client";
+import { api, UserListItem, WeeklyCycle, WeeklyCycleStatus } from "../api/client";
 
 const statusLabels: Record<WeeklyCycleStatus, string> = {
   COLLECTING: "Сбор",
@@ -34,7 +34,15 @@ export function CyclesPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
   const [disassemblingId, setDisassemblingId] = useState<string | null>(null);
+
+  const [speakers, setSpeakers] = useState<UserListItem[]>([]);
+  const [reminderCycleId, setReminderCycleId] = useState<string | null>(null);
+  const [reminderRecipientIds, setReminderRecipientIds] = useState<string[]>([]);
+  const [reminderMessage, setReminderMessage] = useState("");
+  const [reminderSending, setReminderSending] = useState(false);
+  const [reminderResult, setReminderResult] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editWeekLabel, setEditWeekLabel] = useState("");
@@ -49,6 +57,10 @@ export function CyclesPage() {
 
   useEffect(() => {
     loadCycles();
+    api
+      .listUsers()
+      .then((users) => setSpeakers(users.filter((u) => u.role === "SPEAKER" && u.isActive)))
+      .catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -96,6 +108,52 @@ export function CyclesPage() {
       setError(err instanceof Error ? err.message : "Не удалось разобрать презентацию");
     } finally {
       setDisassemblingId(null);
+    }
+  }
+
+  async function handleUnarchive(cycle: WeeklyCycle) {
+    setError(null);
+    setUnarchivingId(cycle.id);
+    try {
+      await api.unarchiveCycle(cycle.id);
+      loadCycles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось разархивировать цикл");
+    } finally {
+      setUnarchivingId(null);
+    }
+  }
+
+  function openReminderPanel(cycle: WeeklyCycle) {
+    setReminderCycleId(cycle.id);
+    setReminderRecipientIds(speakers.map((s) => s.id));
+    setReminderMessage("");
+    setReminderResult(null);
+    setError(null);
+  }
+
+  function closeReminderPanel() {
+    setReminderCycleId(null);
+  }
+
+  function toggleReminderRecipient(userId: string, checked: boolean) {
+    setReminderRecipientIds((prev) => (checked ? [...prev, userId] : prev.filter((id) => id !== userId)));
+  }
+
+  async function handleSendReminder() {
+    if (!reminderCycleId || reminderRecipientIds.length === 0) return;
+    setReminderSending(true);
+    setError(null);
+    try {
+      const result = await api.sendCycleReminder(reminderCycleId, {
+        recipientIds: reminderRecipientIds,
+        message: reminderMessage.trim() || undefined,
+      });
+      setReminderResult(`Напоминание отправлено: ${result.sent}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось отправить напоминание");
+    } finally {
+      setReminderSending(false);
     }
   }
 
@@ -214,6 +272,16 @@ export function CyclesPage() {
                           </p>
                         </>
                       )}
+                      {c.status === "ARCHIVED" && (
+                        <button className="secondary" disabled={unarchivingId === c.id} onClick={() => handleUnarchive(c)}>
+                          {unarchivingId === c.id ? "Разархивируем…" : "Из архива"}
+                        </button>
+                      )}
+                      {c.status === "COLLECTING" && (
+                        <button className="secondary" onClick={() => openReminderPanel(c)}>
+                          Напомнить спикерам
+                        </button>
+                      )}
                     </td>
                     <td>
                       <button className="secondary" onClick={() => startEdit(c)}>
@@ -233,6 +301,48 @@ export function CyclesPage() {
             </tbody>
           </table>
         </div>
+
+        {reminderCycleId && (
+          <div className="card">
+            <h2>Напомнить спикерам — {cycles.find((c) => c.id === reminderCycleId)?.weekLabel}</h2>
+            {reminderResult && <p className="saved-hint">{reminderResult}</p>}
+            <div className="field">
+              <label>Получатели</label>
+              <div className="checkbox-list">
+                {speakers.length === 0 && <p className="hint-text">Активных спикеров нет</p>}
+                {speakers.map((u) => (
+                  <label key={u.id}>
+                    <input
+                      type="checkbox"
+                      checked={reminderRecipientIds.includes(u.id)}
+                      onChange={(e) => toggleReminderRecipient(u.id, e.target.checked)}
+                    />
+                    {u.fullName}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="reminderMessage">Дополнительное сообщение (необязательно)</label>
+              <textarea
+                id="reminderMessage"
+                rows={2}
+                value={reminderMessage}
+                onChange={(e) => setReminderMessage(e.target.value)}
+              />
+            </div>
+            <button
+              className="primary"
+              disabled={reminderSending || reminderRecipientIds.length === 0}
+              onClick={handleSendReminder}
+            >
+              {reminderSending ? "Отправляем…" : "Отправить"}
+            </button>{" "}
+            <button className="secondary" onClick={closeReminderPanel}>
+              Закрыть
+            </button>
+          </div>
+        )}
 
         <form className="card" onSubmit={handleSubmit}>
           <h2>Новый цикл</h2>

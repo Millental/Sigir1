@@ -12,6 +12,7 @@ import {
   detectChartImageFormat,
 } from "../utils/chartImageStorage";
 import { stableStringify } from "../utils/stableStringify";
+import { findMissingRequired } from "../utils/slideRequired";
 
 const router = Router();
 
@@ -227,7 +228,12 @@ router.post("/", requireRole("SPEAKER"), async (req, res) => {
 router.post("/:id/submit", requireRole("SPEAKER"), async (req, res) => {
   const slide = await prisma.slide.findUnique({
     where: { id: req.params.id },
-    include: { weeklyCycle: true },
+    include: {
+      weeklyCycle: true,
+      fieldValues: true,
+      blockValues: true,
+      template: { include: { fields: true, blocks: true } },
+    },
   });
   if (!slide || slide.ownerId !== req.user!.userId) {
     return res.status(404).json({ error: "Слайд не найден" });
@@ -237,6 +243,11 @@ router.post("/:id/submit", requireRole("SPEAKER"), async (req, res) => {
   }
   if (slide.weeklyCycle.status !== "COLLECTING") {
     return res.status(403).json({ error: "Цикл закрыт для редактирования" });
+  }
+
+  const missing = findMissingRequired(slide.template, slide.fieldValues, slide.blockValues);
+  if (missing.length > 0) {
+    return res.status(400).json({ error: "Заполните обязательные поля перед отправкой на проверку", missing });
   }
 
   const updated = await prisma.slide.update({

@@ -7,6 +7,10 @@ function targetUrl(item: NotificationItem): string | null {
     case "DEADLINE_APPROACHING":
     case "NEEDS_REVISION":
       return `/slides?cycle=${item.weeklyCycleId}&template=${item.templateId}`;
+    case "ADMIN_REMINDER":
+      // Персистентная запись несёт weeklyCycleId, но не templateId (получатель мог ещё не
+      // начать ни один слайд в цикле) — ведём на выбор шаблона внутри цикла, а не на конкретный.
+      return `/slides?cycle=${item.weeklyCycleId}`;
     case "ALL_SUBMITTED":
       return `/review?cycle=${item.weeklyCycleId}`;
     case "CYCLE_ASSEMBLED":
