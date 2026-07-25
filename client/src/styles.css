@@ -80,6 +80,27 @@ body {
   outline-offset: 1px;
 }
 
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 40px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
 button.primary {
   width: 100%;
   padding: 11px;
@@ -549,10 +570,17 @@ button.danger-outline {
   overflow-wrap: anywhere;
 }
 
-.data-table select {
+.data-table select,
+.data-table input {
+  width: 100%;
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  font-size: 14px;
+}
+
+.data-table td button.primary {
+  width: auto;
 }
 
 .muted-cell {

@@ -24,6 +24,7 @@ export function UsersPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFullName, setEditFullName] = useState("");
+  const [editLogin, setEditLogin] = useState("");
   const [editRole, setEditRole] = useState<"ADMIN" | "SPEAKER">("SPEAKER");
   const [editDepartmentId, setEditDepartmentId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -71,6 +72,7 @@ export function UsersPage() {
   function startEdit(u: UserListItem) {
     setEditingId(u.id);
     setEditFullName(u.fullName);
+    setEditLogin(u.login);
     setEditRole(u.role);
     setEditDepartmentId(u.departmentId ?? "");
     setError(null);
@@ -81,12 +83,17 @@ export function UsersPage() {
   }
 
   async function saveEdit(u: UserListItem) {
+    if (!editLogin.trim()) {
+      setError("Логин не может быть пустым");
+      return;
+    }
     setSaving(true);
     setError(null);
     const isSelf = currentUser?.id === u.id;
     try {
       await api.updateUser(u.id, {
         fullName: editFullName.trim(),
+        login: editLogin.trim(),
         // Роль недоступна для правки в своей строке (select задизейблен) — не отправляем её вовсе,
         // иначе backend-защита от самопонижения (role !== undefined -> 400) заблокирует даже
         // безобидное сохранение одного только ФИО.
@@ -217,7 +224,9 @@ export function UsersPage() {
                         <td>
                           <input value={editFullName} onChange={(e) => setEditFullName(e.target.value)} />
                         </td>
-                        <td className="muted-cell">{u.login}</td>
+                        <td>
+                          <input value={editLogin} onChange={(e) => setEditLogin(e.target.value)} />
+                        </td>
                         <td>
                           <select
                             value={editRole}

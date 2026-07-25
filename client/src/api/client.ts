@@ -234,11 +234,19 @@ export const api = {
     request("/users", { method: "POST", body: JSON.stringify(data) }),
   updateUser: (
     id: string,
-    data: Partial<{ fullName: string; role: "ADMIN" | "SPEAKER"; isActive: boolean; departmentId: string | null }>
+    data: Partial<{
+      fullName: string;
+      login: string;
+      role: "ADMIN" | "SPEAKER";
+      isActive: boolean;
+      departmentId: string | null;
+    }>
   ): Promise<UserListItem> => request(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deleteUser: (id: string): Promise<{ id: string }> => request(`/users/${id}`, { method: "DELETE" }),
   resetUserPassword: (id: string): Promise<{ tempPassword: string }> =>
     request(`/users/${id}/reset-password`, { method: "POST" }),
+  changePassword: (data: { currentPassword: string; newPassword: string }): Promise<{ ok: true }> =>
+    request("/auth/change-password", { method: "POST", body: JSON.stringify(data) }),
 
   listDepartments: (): Promise<Department[]> => request("/departments"),
   createDepartment: (name: string): Promise<Department> =>
@@ -293,8 +301,12 @@ export const api = {
   ): Promise<Template> => request(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   listCycles: (): Promise<WeeklyCycle[]> => request("/weekly-cycles"),
-  createCycle: (data: { weekLabel: string; startDate: string; endDate: string }): Promise<WeeklyCycle> =>
-    request("/weekly-cycles", { method: "POST", body: JSON.stringify(data) }),
+  createCycle: (data: {
+    weekLabel: string;
+    startDate: string;
+    endDate: string;
+    deadline?: string | null;
+  }): Promise<WeeklyCycle> => request("/weekly-cycles", { method: "POST", body: JSON.stringify(data) }),
   updateCycle: (
     id: string,
     data: Partial<Pick<WeeklyCycle, "weekLabel" | "startDate" | "endDate" | "deadline">>

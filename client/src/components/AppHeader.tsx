@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { NotificationBell } from "./NotificationBell";
+import { ChangePasswordModal } from "./ChangePasswordModal";
 
 const adminLinks = [
   { to: "/", label: "Дашборд" },
@@ -22,6 +24,7 @@ const speakerLinks = [
 export function AppHeader() {
   const { user, logout } = useAuth();
   const links = user?.role === "ADMIN" ? adminLinks : speakerLinks;
+  const [changingPassword, setChangingPassword] = useState(false);
 
   return (
     <header className="app-header">
@@ -43,10 +46,14 @@ export function AppHeader() {
       <span className="who">
         <NotificationBell />
         {user?.fullName} <span className="badge">{user?.role === "ADMIN" ? "Администратор" : "Спикер"}</span>
+        <button className="link" onClick={() => setChangingPassword(true)}>
+          Сменить пароль
+        </button>
         <button className="link" onClick={logout}>
           Выйти
         </button>
       </span>
+      {changingPassword && <ChangePasswordModal onClose={() => setChangingPassword(false)} />}
     </header>
   );
 }

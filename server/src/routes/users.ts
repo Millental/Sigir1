@@ -1,5 +1,6 @@
 import { Router } from "express";
 import crypto from "crypto";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { hashPassword } from "../utils/hash";
@@ -56,7 +57,10 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Укажите ФИО и логин" });
   }
 
-  const existing = await prisma.user.findUnique({ where: { login } });
+  // Логин всегда хранится в нижнем регистре — вход в auth.ts приводит ввод так же,
+  // это делает логин фактически нечувствительным к регистру.
+  const normalizedLogin = String(login).trim().toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { login: normalizedLogin } });
   if (existing) {
     return res.status(409).json({ error: "Пользователь с таким логином уже существует" });
   }
@@ -71,7 +75,7 @@ router.post("/", async (req, res) => {
   const user = await prisma.user.create({
     data: {
       fullName,
-      login,
+      login: normalizedLogin,
       role: role === "ADMIN" ? "ADMIN" : "SPEAKER",
       passwordHash,
       departmentId: departmentId ?? null,
@@ -95,7 +99,7 @@ router.post("/", async (req, res) => {
 });
 
 router.patch("/:id", async (req, res) => {
-  const { fullName, role, isActive, departmentId } = req.body ?? {};
+  const { fullName, login, role, isActive, departmentId } = req.body ?? {};
 
   if (isSelf(req, req.params.id) && (role !== undefined || isActive !== undefined)) {
     return res.status(400).json({ error: "Нельзя изменить роль или активность собственной учётной записи" });
@@ -111,11 +115,27 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ error: "Отдел не найден" });
   }
 
+  let normalizedLogin: string | undefined;
+  if (login !== undefined) {
+    normalizedLogin = String(login).trim().toLowerCase();
+    if (!normalizedLogin) {
+      return res.status(400).json({ error: "Логин не может быть пустым" });
+    }
+    const conflict = await prisma.user.findFirst({
+      where: { login: normalizedLogin, NOT: { id: req.params.id } },
+      select: { id: true },
+    });
+    if (conflict) {
+      return res.status(409).json({ error: "Пользователь с таким логином уже существует" });
+    }
+  }
+
   try {
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: {
         ...(fullName !== undefined ? { fullName } : {}),
+        ...(normalizedLogin !== undefined ? { login: normalizedLogin } : {}),
         ...(role !== undefined ? { role } : {}),
         ...(isActive !== undefined ? { isActive } : {}),
         ...(departmentId !== undefined ? { departmentId } : {}),
@@ -127,11 +147,15 @@ router.patch("/:id", async (req, res) => {
     res.json({
       id: user.id,
       fullName: user.fullName,
+      login: user.login,
       role: user.role,
       isActive: user.isActive,
       departmentId: user.departmentId,
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return res.status(409).json({ error: "Пользователь с таким логином уже существует" });
+    }
     res.status(404).json({ error: "Пользователь не найден" });
   }
 });

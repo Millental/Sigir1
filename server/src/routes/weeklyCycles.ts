@@ -14,13 +14,21 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", requireRole("ADMIN"), async (req, res) => {
-  const { weekLabel, startDate, endDate } = req.body ?? {};
+  const { weekLabel, startDate, endDate, deadline } = req.body ?? {};
   if (!weekLabel || !startDate || !endDate) {
     return res.status(400).json({ error: "Укажите название недели, дату начала и дату окончания" });
   }
+  if (new Date(startDate) >= new Date(endDate)) {
+    return res.status(400).json({ error: "Дата начала должна быть раньше даты окончания" });
+  }
 
   const cycle = await prisma.weeklyCycle.create({
-    data: { weekLabel, startDate: new Date(startDate), endDate: new Date(endDate) },
+    data: {
+      weekLabel,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      deadline: deadline ? new Date(deadline) : null,
+    },
   });
 
   await prisma.auditLogEntry.create({
@@ -37,6 +45,17 @@ router.patch("/:id", requireRole("ADMIN"), async (req, res) => {
       error: "Статус меняется через отдельные действия — сборку презентации или архивацию",
     });
   }
+
+  if (startDate !== undefined || endDate !== undefined) {
+    const existing = await prisma.weeklyCycle.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Цикл не найден" });
+    const effectiveStart = startDate !== undefined ? new Date(startDate) : existing.startDate;
+    const effectiveEnd = endDate !== undefined ? new Date(endDate) : existing.endDate;
+    if (effectiveStart >= effectiveEnd) {
+      return res.status(400).json({ error: "Дата начала должна быть раньше даты окончания" });
+    }
+  }
+
   try {
     const cycle = await prisma.weeklyCycle.update({
       where: { id: req.params.id },

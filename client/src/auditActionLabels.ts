@@ -12,6 +12,7 @@ export const auditActionLabels: Record<string, string> = {
   USER_CREATE: "Создание пользователя",
   USER_UPDATE: "Изменение пользователя",
   USER_PASSWORD_RESET: "Сброс пароля",
+  USER_PASSWORD_CHANGE: "Смена собственного пароля",
   USER_DELETE: "Удаление пользователя",
   DEPARTMENT_CREATE: "Создание отдела",
   DEPARTMENT_UPDATE: "Изменение отдела",

@@ -7,6 +7,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [loginValue, setLoginValue] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,14 +47,25 @@ export function LoginPage() {
         </div>
         <div className="field">
           <label htmlFor="password">Пароль</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
+          <div className="password-field">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+              tabIndex={-1}
+            >
+              {showPassword ? "🙈" : "👁"}
+            </button>
+          </div>
         </div>
         <button className="primary" type="submit" disabled={submitting}>
           {submitting ? "Проверяем…" : "Войти"}

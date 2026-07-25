@@ -31,6 +31,7 @@ export function CyclesPage() {
   const [weekLabel, setWeekLabel] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
@@ -70,13 +71,23 @@ export function CyclesPage() {
       setError("Заполните название недели и обе даты");
       return;
     }
+    if (new Date(startDate) >= new Date(endDate)) {
+      setError("Дата начала должна быть раньше даты окончания");
+      return;
+    }
 
     setSaving(true);
     try {
-      await api.createCycle({ weekLabel: weekLabel.trim(), startDate, endDate });
+      await api.createCycle({
+        weekLabel: weekLabel.trim(),
+        startDate,
+        endDate,
+        deadline: deadline ? new Date(deadline).toISOString() : null,
+      });
       setWeekLabel("");
       setStartDate("");
       setEndDate("");
+      setDeadline("");
       loadCycles();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось создать цикл");
@@ -174,6 +185,10 @@ export function CyclesPage() {
     setError(null);
     if (!editWeekLabel.trim() || !editStartDate || !editEndDate) {
       setError("Заполните название недели и обе даты");
+      return;
+    }
+    if (new Date(editStartDate) >= new Date(editEndDate)) {
+      setError("Дата начала должна быть раньше даты окончания");
       return;
     }
     setEditSaving(true);
@@ -359,6 +374,10 @@ export function CyclesPage() {
               <label htmlFor="endDate">Окончание</label>
               <input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
+          </div>
+          <div className="field">
+            <label htmlFor="deadline">Дедлайн (необязательно)</label>
+            <input id="deadline" type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           </div>
           <button className="primary" type="submit" disabled={saving}>
             {saving ? "Создаём…" : "Создать цикл"}
