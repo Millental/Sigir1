@@ -1,0 +1,1052 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Свод недели — пилот (Этап 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: light;
+    --plane:      #faf8f3;
+    --surface:    #faf8f3;
+    --surface-2:  #f1ecdf;
+    --line:       #ddd4c0;
+    --line-soft:  #e9e2d2;
+    --ink:        #20161b;
+    --ink-soft:   #594a52;
+    --muted:      #8c7f85;
+    --brand-900:  #1c1129;
+    --brand-700:  #3a2260;
+    --brand-600:  #4d2c82;
+    --brand-500:  #6c3fb0;
+    --brand-300:  #b79ce3;
+    --brand-100:  #ece2f8;
+    --amber-600:  #b9720e;
+    --amber-500:  #d9a441;
+    --amber-100:  #faedd3;
+    --orange-500: #c2581a;
+    --orange-700: #8a3d0f;
+    --orange-100: #fce7d6;
+    --good:       #2f7d3c;
+    --good-bg:    #e5f7e5;
+    --warning:    #a86a00;
+    --warning-bg: #fdf0d8;
+    --serious:    #b23a1c;
+    --serious-bg: #fbe6dc;
+    --critical:   #a62f2f;
+    --critical-bg:#fbe3e3;
+    --shadow: none;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --plane:      #171019;
+      --surface:    #171019;
+      --surface-2:  #221a24;
+      --line:       #3a2f3a;
+      --line-soft:  #2c2430;
+      --ink:        #f2ecef;
+      --ink-soft:   #cbbdc5;
+      --muted:      #948a90;
+      --brand-500:  #a788dd;
+      --brand-300:  #6c4aa6;
+      --brand-100:  #291f3a;
+      --amber-600:  #e6ab4d;
+      --orange-500: #e38a52;
+      --orange-700: #f0a56c;
+      --good:       #4fc466;
+      --good-bg:    #15301d;
+      --warning:    #e3b24c;
+      --warning-bg: #332710;
+      --serious:    #e07e52;
+      --serious-bg: #35241a;
+      --critical:   #e2706b;
+      --critical-bg:#361d1c;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --plane:      #171019;
+    --surface:    #171019;
+    --surface-2:  #221a24;
+    --line:       #3a2f3a;
+    --line-soft:  #2c2430;
+    --ink:        #f2ecef;
+    --ink-soft:   #cbbdc5;
+    --muted:      #948a90;
+    --brand-500:  #a788dd;
+    --brand-300:  #6c4aa6;
+    --brand-100:  #291f3a;
+    --amber-600:  #e6ab4d;
+    --orange-500: #e38a52;
+    --orange-700: #f0a56c;
+    --good:       #4fc466;
+    --good-bg:    #15301d;
+    --warning:    #e3b24c;
+    --warning-bg: #332710;
+    --serious:    #e07e52;
+    --serious-bg: #35241a;
+    --critical:   #e2706b;
+    --critical-bg:#361d1c;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--plane); color:var(--ink);
+    font-family:"Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size:15.5px; line-height:1.5; -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.eyebrow,.nav-link{font-family:"Montserrat","Golos Text",system-ui,sans-serif}
+  h1,h2,h3{margin:0; text-wrap:balance; font-weight:700; letter-spacing:-.01em}
+  p{margin:0}
+  ul{margin:0; padding:0; list-style:none}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--brand-500); outline-offset:3px; border-radius:2px}
+  .num{font-variant-numeric:tabular-nums}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px}
+  @media (max-width:640px){.wrap{padding:0 18px}}
+
+  /* ---------- header: flat band, no mesh gradient, one thin rule ---------- */
+  header.masthead{
+    background:var(--brand-900);
+    color:#f4effc; padding:48px 0 34px;
+  }
+  .masthead .eyebrow{color:#c9adf2}
+  .masthead .eyebrow .brand-mark{color:var(--orange-500); font-weight:800}
+  header.masthead h1{
+    font-size:clamp(2.1rem, 4.4vw, 3.1rem); font-weight:800; color:#fff; margin-top:10px;
+  }
+  .masthead-meta{
+    display:flex; flex-wrap:wrap; gap:8px 28px; margin-top:18px;
+    font-size:.9rem; color:#cdbbe6; font-variant-numeric:tabular-nums;
+  }
+  .masthead-meta b{color:#fff; font-weight:600}
+  .masthead-rule{
+    width:100%; height:1px; margin-top:24px;
+    background:linear-gradient(90deg, var(--orange-500), transparent 70%);
+  }
+
+  .eyebrow{
+    text-transform:uppercase; font-size:.72rem; font-weight:700; letter-spacing:.11em;
+    color:var(--brand-500);
+  }
+
+  /* ---------- sticky nav: a contents line, not an app tab bar ---------- */
+  nav.subnav{
+    position:sticky; top:0; z-index:30;
+    background:color-mix(in oklab, var(--surface) 92%, transparent);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  nav.subnav .wrap{
+    display:flex; align-items:center; gap:0; overflow-x:auto;
+    padding-top:12px; padding-bottom:12px; scrollbar-width:thin;
+    scrollbar-color:var(--brand-300) transparent;
+    -webkit-mask-image:linear-gradient(to right, #000 calc(100% - 46px), transparent 100%);
+    mask-image:linear-gradient(to right, #000 calc(100% - 46px), transparent 100%);
+  }
+  nav.subnav .wrap::-webkit-scrollbar{height:6px}
+  nav.subnav .wrap::-webkit-scrollbar-track{background:transparent}
+  nav.subnav .wrap::-webkit-scrollbar-thumb{background:var(--brand-300); border-radius:99px}
+  nav.subnav .wrap::-webkit-scrollbar-thumb:hover{background:var(--brand-500)}
+  .nav-link{
+    flex:0 0 auto; white-space:nowrap; font-size:.8rem; font-weight:600;
+    color:var(--ink-soft); padding:5px 0; margin-right:18px;
+    text-decoration:none; border-bottom:2px solid transparent;
+    transition:color .12s, border-color .12s;
+  }
+  .nav-link:hover{color:var(--orange-700); border-color:var(--orange-500)}
+  .nav-sep{display:none}
+
+  /* ---------- kpi hero: numbers on paper, no elevated card ---------- */
+  .hero-kpi{padding:40px 0 14px}
+  .hero-kpi-card{
+    border-top:1px solid var(--ink); border-bottom:1px solid var(--line);
+    padding:22px 0 26px;
+    display:flex; flex-wrap:wrap; align-items:flex-end; gap:24px 44px;
+  }
+  .hero-figure-label{font-size:.92rem; color:var(--ink-soft); margin-bottom:6px}
+  .hero-figure{font-size:clamp(2.4rem, 5vw, 3.4rem); font-weight:700; font-family:"Golos Text",sans-serif; letter-spacing:-.02em; color:var(--ink)}
+  .hero-sub{font-size:.88rem; color:var(--muted); margin-top:8px}
+  .hero-chip{
+    display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:.92rem;
+    color:var(--good);
+  }
+  .hero-chip::before{content:"· "; color:var(--muted); font-weight:400}
+  .hero-context{display:flex; gap:26px; flex-wrap:wrap; margin-left:auto}
+  .hero-context .mini{font-size:.8rem; color:var(--muted)}
+  .hero-context .mini b{display:block; font-size:1.08rem; color:var(--ink); font-weight:700; font-family:"Golos Text"}
+
+  /* ---------- section shell: generous air, one rule between sections ---------- */
+  section.dept{padding:46px 0; border-top:1px solid var(--line)}
+  section.dept:first-of-type{border-top:none}
+  .dept-head{scroll-margin-top:76px; margin-bottom:24px; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+  .dept-head h2{font-size:1.38rem; color:var(--ink)}
+  .dept-head .role{font-size:.88rem; color:var(--muted)}
+  .group-title{
+    padding:36px 0 6px; font-size:.72rem; text-transform:uppercase; letter-spacing:.16em;
+    font-weight:700; color:var(--orange-700); border-top:1px solid var(--ink); margin-top:8px;
+  }
+  section.dept:first-of-type + .group-title, .wrap > .group-title:first-child{border-top:none; margin-top:0}
+
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:30px; min-width:0}
+  .row2 > *{min-width:0}
+  @media (max-width:760px){.row2{grid-template-columns:1fr}}
+
+  .block{margin-bottom:22px}
+  .block:last-child{margin-bottom:0}
+  .block-title{font-size:.82rem; font-weight:700; color:var(--ink-soft); margin-bottom:10px; text-transform:uppercase; letter-spacing:.04em}
+
+  .bullets li{position:relative; padding-left:14px; margin-bottom:5px; color:var(--ink-soft); font-size:.88rem}
+  .bullets li::before{content:"–"; position:absolute; left:0; color:var(--muted)}
+  .bullets.tight li{margin-bottom:3px}
+
+  .callout{
+    border-left:3px solid var(--brand-500); padding:4px 0 4px 16px;
+    font-size:.9rem; color:var(--ink); font-weight:500;
+  }
+
+  .risk{border-left:3px solid var(--serious); padding:4px 0 4px 16px; font-size:.9rem; color:var(--serious); font-weight:500}
+
+  /* dept footer — thin rule, no strip-card */
+  .dept-footer{margin-top:32px; padding-top:18px; border-top:1px solid var(--line-soft)}
+  .dept-footer-label{
+    font-size:.74rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
+    font-weight:700; margin-bottom:12px;
+  }
+  .dept-footer-row{display:flex; flex-wrap:wrap; column-gap:36px; row-gap:12px}
+  .dept-footer-stat .dt{font-size:.72rem; color:var(--muted); margin-bottom:3px}
+  .dept-footer-stat .dd{font-size:.98rem; font-weight:700; color:var(--ink)}
+  .dept-footer-note{font-size:.86rem; color:var(--ink-soft); max-width:320px}
+  .dept-footer-note b{color:var(--ink); font-weight:600}
+  .dept-footer-empty{font-size:.86rem; color:var(--muted); font-style:italic}
+
+  /* stat tiles: numbers do the talking, no card */
+  .stat-row{display:flex; flex-wrap:wrap; gap:30px; margin-bottom:20px}
+  .stat{min-width:110px}
+  .stat-label{font-size:.76rem; color:var(--muted); margin-bottom:3px}
+  .stat-value{font-size:1.5rem; font-weight:700; color:var(--ink)}
+  .stat-value small{font-size:.95rem; font-weight:600; color:var(--muted)}
+  .stat-delta{font-size:.78rem; font-weight:700; margin-top:2px}
+  .stat-delta.good{color:var(--good)}
+  .stat-delta.bad{color:var(--critical)}
+  .stat-delta.warn{color:var(--warning)}
+  .stat-delta.flat{color:var(--muted)}
+
+  /* meter: a thin line, color only when it means something */
+  .meter-row{display:flex; flex-direction:column; gap:9px; margin-bottom:4px}
+  .meter{display:grid; grid-template-columns:1fr auto; gap:2px 12px; align-items:baseline}
+  .meter-label{font-size:.8rem; color:var(--ink-soft)}
+  .meter-val{font-size:.8rem; font-weight:700; color:var(--ink)}
+  .meter-track{grid-column:1/-1; height:3px; background:var(--line); overflow:hidden; position:relative}
+  .meter-fill{height:100%; background:var(--brand-500)}
+  .meter-fill.status-serious{background:var(--serious)}
+  .meter-fill.status-good{background:var(--good)}
+  .meter-track.over{background:var(--serious-bg)}
+
+  /* tables: a ledger, not a widget — flat rules, no card frame */
+  .tbl-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%}
+  table.tbl{width:100%; border-collapse:collapse; font-size:.82rem; min-width:0}
+  table.tbl th, table.tbl td{padding:6px 10px 6px 0; text-align:right; border-bottom:1px solid var(--line-soft); white-space:nowrap}
+  table.tbl th:first-child, table.tbl td:first-child{text-align:left; white-space:normal; padding-left:0}
+  table.tbl th.wrap, table.tbl td.wrap{white-space:normal; text-align:left}
+  table.tbl thead th{color:var(--muted); font-weight:600; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--ink)}
+  table.tbl tbody tr:last-child td{border-bottom:1px solid var(--line-soft)}
+  table.tbl tr.total td{font-weight:700; color:var(--ink); border-top:1px solid var(--ink); border-bottom:none}
+  table.tbl td.num, table.tbl th.num{font-variant-numeric:tabular-nums}
+  .tbl-caption{font-size:.8rem; color:var(--muted); margin:9px 0 5px; font-weight:600}
+  .tbl-caption:first-child{margin-top:0}
+
+  /* bar+target chart: printed-report chart, no elevated card */
+  .chart-card{padding:0; border-top:1px solid var(--line-soft)}
+  .chart-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin:14px 0 10px; flex-wrap:wrap}
+  .chart-head h4{font-size:.86rem; font-weight:700; color:var(--ink-soft)}
+  .chart-legend{display:flex; gap:16px; font-size:.78rem; color:var(--muted)}
+  .chart-legend span{display:inline-flex; align-items:center; gap:6px}
+  .chart-legend i{width:10px; height:10px; display:inline-block}
+  .chart-legend i.bar{background:var(--brand-500)}
+  .chart-legend i.target{background:none; border-top:2px solid var(--ink-soft); width:12px; height:0}
+  .bartrend{display:flex; align-items:flex-end; gap:6px; height:130px; padding:0 2px}
+  .bartrend .col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative}
+  .bartrend .track{position:relative; width:22px; height:100%; display:flex; align-items:flex-end}
+  .bartrend .bar{width:100%; background:var(--brand-500)}
+  .bartrend .bar.hi{background:var(--brand-700)}
+  .bartrend .target{position:absolute; left:-6px; right:-6px; height:1px; background:var(--ink-soft)}
+  .bartrend .mlabel{font-size:.68rem; color:var(--muted); margin-top:8px; text-align:center}
+  .bartrend .vlabel{position:absolute; top:-19px; left:0; right:0; text-align:center; font-size:.68rem; font-weight:700; color:var(--brand-700)}
+  :root[data-theme="dark"] .bartrend .vlabel{color:var(--brand-300)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bartrend .vlabel{color:var(--brand-300)}}
+
+  /* line chart */
+  .linechart{width:100%; height:auto}
+  .linechart .grid-line{stroke:var(--line-soft); stroke-width:1}
+  .linechart .area{fill:var(--brand-500); opacity:.08}
+  .linechart .line{fill:none; stroke:var(--brand-500); stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+  .linechart .dot{fill:var(--surface); stroke:var(--brand-500); stroke-width:2}
+  .linechart .dot.end{fill:var(--brand-700); stroke:var(--surface); stroke-width:2}
+  .linechart text{font-family:"Golos Text",sans-serif; fill:var(--muted); font-size:11px}
+  .linechart text.end-label{fill:var(--brand-700); font-weight:700; font-size:12px}
+  :root[data-theme="dark"] .linechart text.end-label{fill:var(--brand-300)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .linechart text.end-label{fill:var(--brand-300)}}
+
+  /* dl route list (sales) */
+  .routes{display:grid; grid-template-columns:1fr; gap:0}
+  .routes .row{display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid var(--line-soft); font-size:.86rem}
+  .routes .row:last-child{border-bottom:none}
+  .routes .route{color:var(--ink-soft)}
+  .routes .figure{font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums}
+
+  /* chips become plain comma-separated text, not a tag cloud */
+  .taglist{font-size:.84rem; color:var(--ink-soft); line-height:1.7}
+  .tag{display:inline; padding:0; border:none; background:none; color:inherit; font-size:inherit}
+  .tag:not(:last-child)::after{content:", "; color:var(--muted)}
+
+  .segments{display:grid; grid-template-columns:repeat(2,1fr); gap:6px 22px}
+  @media (max-width:560px){.segments{grid-template-columns:1fr}}
+  .segments dt{font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--brand-500); font-weight:700; margin-bottom:3px}
+  .segments dd{margin:0 0 9px; font-size:.82rem; color:var(--ink-soft)}
+
+  .kv{display:flex; gap:20px; flex-wrap:wrap; margin-bottom:10px}
+  .kv .item{font-size:.82rem; color:var(--muted)}
+  .kv .item b{display:block; font-size:1.08rem; color:var(--ink); font-weight:700}
+
+  .cols3{display:grid; grid-template-columns:repeat(3,1fr); gap:28px; min-width:0}
+  .cols3 > *{min-width:0; border-left:1px solid var(--line-soft); padding-left:18px}
+  .cols3 > *:first-child{border-left:none; padding-left:0}
+  @media (max-width:900px){.cols3{grid-template-columns:1fr} .cols3 > *{border-left:none; padding-left:0; border-top:1px solid var(--line-soft); padding-top:14px} .cols3 > *:first-child{border-top:none; padding-top:0}}
+
+  .subgroup{margin-bottom:12px}
+  .subgroup:last-child{margin-bottom:0}
+  .subgroup-title{font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--orange-700); margin-bottom:4px}
+  .subcard{padding:0}
+  .subcard h5{font-size:.84rem; font-weight:700; margin-bottom:8px; color:var(--ink)}
+
+  .status-tag{display:inline; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px}
+  .status-tag::before{content:"● "; font-size:.6rem}
+  .status-tag.done{color:var(--good)}
+  .status-tag.progress{color:var(--warning)}
+
+  /* empty-week placeholder: an honest dashed note, not a decorative card */
+  .divider-dept{
+    margin:18px 0; padding:28px 0; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line);
+    display:flex; flex-direction:column; align-items:flex-start; justify-content:center;
+    gap:8px; min-height:0;
+  }
+  .divider-dept h3{font-size:1.5rem; color:var(--ink-soft); font-weight:700}
+  .divider-dept .tag-empty{
+    font-size:.84rem; color:var(--muted); font-style:italic;
+  }
+
+  footer{padding:44px 0 56px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--line)}
+  footer .wordmark{font-family:"Montserrat"; font-weight:800; letter-spacing:.06em; color:var(--orange-700); font-size:1rem; margin-bottom:6px}
+
+  @media print{
+    nav.subnav{position:static}
+    section.dept{break-inside:avoid}
+  }
+
+  /* ---------- Этап 2: редактор (намеренно утилитарный, не часть ledger-языка) ---------- */
+  .edit-toggle{
+    font-family:"Golos Text",sans-serif; font-size:.74rem; font-weight:600;
+    color:var(--brand-500); background:none; border:1px solid var(--brand-300);
+    border-radius:6px; padding:3px 9px; margin-left:12px; cursor:pointer; vertical-align:middle;
+  }
+  .edit-toggle:hover{background:var(--brand-100)}
+  .divider-dept .edit-toggle{margin-left:0; margin-top:10px; display:inline-block}
+  .edit-panel{
+    margin:14px 0 28px; padding:16px 18px; border:1px dashed var(--line);
+    border-radius:10px; background:var(--surface-2);
+  }
+  .edit-title{font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:12px; font-weight:700}
+  .edit-row{margin-bottom:12px}
+  .edit-row label{display:block; font-size:.8rem; color:var(--ink-soft); margin-bottom:4px}
+  .edit-row textarea, .edit-row input[type=number], .edit-row select{
+    font-family:"Golos Text",sans-serif; font-size:.86rem; color:var(--ink);
+    background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 9px;
+    width:100%; box-sizing:border-box;
+  }
+  .edit-row textarea{resize:vertical}
+  .edit-pair{display:flex; align-items:center; gap:8px}
+  .edit-pair input{width:90px}
+  .edit-actions{display:flex; align-items:center; gap:10px; margin-top:6px}
+  .edit-btn{
+    font-family:"Golos Text",sans-serif; font-size:.82rem; font-weight:600;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink);
+    border-radius:6px; padding:6px 14px; cursor:pointer;
+  }
+  .edit-btn.primary{background:var(--brand-500); border-color:var(--brand-500); color:#fff}
+  .edit-btn:hover{opacity:.88}
+  .edit-save-status{font-size:.78rem; color:var(--muted)}
+</style>
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">Еженедельное собрание · <span class="brand-mark">SIGIR</span></p>
+    <h1 id="mh-title">Неделя</h1>
+    <div class="masthead-meta" id="mh-meta"></div>
+    <div class="masthead-rule"></div>
+  </div>
+</header>
+
+<nav class="subnav" aria-label="Разделы свода">
+  <div class="wrap" id="subnavWrap"></div>
+</nav>
+
+<main class="wrap" id="main"></main>
+
+<footer>
+  <div class="wrap">
+    <p class="wordmark">SIGIR</p>
+    <p id="ft-text"></p>
+  </div>
+</footer>
+
+<script>
+// ===================== STAGE 1: data-driven render =====================
+// Этот DATA-объект стоит на месте будущего `db` (weeks/<weekId>, departments,
+// weeks/<weekId>/departments/<deptId>). Сейчас он просто инлайн — цель Этапа 1
+// только доказать, что рендер из данных даёт byte-for-byte тот же результат,
+// что сегодняшний ручной HTML недели 39. Доступ на запись ещё не открыт.
+
+const WEEK = {
+  weekNumber: 39,
+  periodLabel: "21–27 сентября 2026",
+  meetingLabel: "28 сентября 2026",
+  deptCount: 16,
+};
+
+// -------- содержимое (шаблон блоков + значения недели 39 в одном месте --------
+// в реальной схеме DEPARTMENTS.blocks (структура) и WEEK_DATA[id] (значения)
+// хранятся раздельно (db: departments vs weeks/<id>/departments/<deptId>);
+// здесь объединено для простоты Этапа 1.
+
+const DEPARTMENTS = [
+  { id:"finance", group:"Финансы и коммерция", name:"Финансы", role:"Соколовская А.",
+    status:"no_report" },
+
+  { id:"perevozki", name:"Директор по перевозкам", role:"Отправки КП в адрес терминала",
+    status:"reported",
+    body:[ {t:"row2", a:[
+        {t:"table", title:"План на месяц", cols:["Оператор","План","Факт"], rightFrom:1,
+          rows:[["Бизнес Актив","5","4"],["Силикатная ФИТ","11","11"],["Владивосток ФИТ","4","2"],
+                ["Санкт-Петербург ФИТ","1","1"],["СКЛ","1","1"],["Транзит","1","1"],
+                ["Перегруз ФИТ","2","2"],["Свифт (ВЭ)","3","2"]],
+          total:["Итого","28","24"]},
+        {t:"meterRow", meters:[{label:"Исполнение плана месяца", val:"86%", pct:86}], mt:14}
+      ], b:[
+        {t:"table", title:"Текущая неделя", cols:["Оператор","План","Факт"], rightFrom:1,
+          rows:[["Бизнес Актив","0","0"],["Силикатная ФИТ","3","3"],["Владивосток ФИТ","1","0"],
+                ["Санкт-Петербург ФИТ","1","1"],["СКЛ","0","0"],["Транзит","0","0"],
+                ["Перегруз ФИТ","0","1"],["Свифт (ВЭ)","1","0"]],
+          total:["Итого","6","5"]}
+      ]}
+    ],
+    footer:{label:"Отдел", empty:"На этой неделе — без записей по событиям, планам, отпускам и найму."} },
+
+  { id:"terminal", name:"Терминал Красноярск", role:"Ковалёв Б. В.", status:"reported",
+    body:[
+      {t:"row2", a:[
+        {t:"bullets", title:"Ключевые события прошлой недели", items:[
+          "Снижение занятости путей / обмен поездами",
+          "Выдали СИЗ (зима) — грузовой двор, производственный отдел",
+          "Провели встречу со специалистом по ОТ (организация обучения по ОТ)",
+          "Приняли участие с АФТО на станции Базаиха, 22.09.2026",
+          "Завершили ремонт кабинета руководства СЛ на терминале"]}
+      ], b:[
+        {t:"bullets", title:"Ключевые планы новой недели", items:[
+          "Снижение занятости путей / обмен поездами",
+          "Рабочая встреча с зам. начальника дороги по территориальному управлению, 28.09",
+          "Рабочая встреча с ДС станции Базаиха",
+          "Оштукатуривание и утепление стены гаража СЛ",
+          "Оснащение комнаты приёма пищи машинистов мебелью и бытовой техникой",
+          "Приступаем к обучению составителей и машинистов на право выезда",
+          "Оплачиваем СИЗ (зима) для ж/д цеха и КПП"]}
+      ]},
+      {t:"block", mt:16, title:"Метрики, достижения, показатели", body:[
+        {t:"row2", a:[
+          {t:"meterRow", meters:[{label:"Занятость ж/д путей (среднее)", val:"104%", pct:80, status:"serious", over:true}]},
+          {t:"table", mt:8, cols:["Поезда","Неделя","Месяц","План"], rightFrom:1,
+            rows:[["Вход, гружёных","7","28","27"],["Вход, порожних","0","0","—"],
+                  ["Выход, гружёных","6","17","19"],["Выход, порожних","3","11","—"]]},
+          {t:"kv", mt:8, mb0:true, items:[["Снятие ТС","13 мин"],["Постановка ТС","29 мин"]]}
+        ], b:[
+          {t:"text", cls:"block-title", style:"font-size:.78rem;margin-bottom:6px", html:"Занятость контейнерной площадки, ср. TEU"},
+          {t:"meterRow", meters:[
+            {label:"Груж. КТК прибытие", val:"660 · 56%", pct:56},
+            {label:"Груж. КТК отправление", val:"419 · 37%", pct:37},
+            {label:"Порожние КТК", val:"2 291 · 74%", pct:74}]}
+        ]}
+      ]}
+    ],
+    footer:{label:"Отдел", stats:[["Фактическая численность","70"],["Больничные","0"],["Отпуска","5"]],
+      notes:[["Вакансия","оператор РИЧ"],["Трудоустройство","мастер автовывоза"],["Увольнения","приёмосдатчик груза и багажа"]]} },
+
+  { id:"engineering", group:"Операции и инфраструктура", name:"Главный инженер", role:"Арутюнян Г.",
+    status:"reported",
+    body:[
+      {t:"row2", a:[
+        {t:"bullets", title:"Ключевые события прошлой недели", items:[
+          "Выверка норм выдачи СИЗ по СТ", "Внесение изменений в приказ по выдаче СИЗ по СТ"]}
+      ], b:[
+        {t:"bullets", title:"Ключевые планы новой недели", items:[
+          "Корректировка приказов по выдаче СИЗ по СТ",
+          "СТ — запуск обучения, ознакомление работников с документами",
+          "СЛ — составление заявки на обучение работников"]}
+      ]},
+      {t:"block", mt:26, title:"Документооборот — разработка локально-нормативных документов",
+        body:[{t:"meterRow", meters:[
+          {label:"СЛ", val:"83 / 96", pct:86}, {label:"СТ", val:"86 / 96", pct:90}]}]}
+    ],
+    footer:{label:"Отдел", stats:[["Болеет","0"],["В отпуске / командировке","0"],["Увольняются","0"],["Ещё не наняты","0"]]} },
+
+  { id:"operations", name:"Операционный отдел СЛ", role:"Арутюнян Г. Ю.", status:"reported",
+    body:[ {t:"row2", a:[
+        {t:"table", title:"Метрики, достижения, показатели", cols:["Площадка","КТГ","ТС в работе","В ремонте"], rightFrom:1,
+          rows:[["Москва","77%","7","2"],["Красноярск","86%","14","2"]]}
+      ], b:[
+        {t:"table", title:"Рейсы, 21.09–27.09.2026", cols:["Площадка","Неделя","Свои","Наём","Итого сентябрь"], rightFrom:1, wrapLast:true,
+          rows:[["Москва","43","37","6","171 (свои 148 / наём 23)"],
+                ["Красноярск — по городу","106","—","—","331 всего"],
+                ["Красноярск — межгород","11","—","—","по городу 280 / межгород 47"],
+                ["Красноярск — по терминалу","0","—","1","по терминалу 4 / наём 5"]]}
+      ]}
+    ],
+    footer:{label:"Отдел", notes:[["Отпуска","1 водитель МСК, 1 водитель выходной"],["Больничные","2, Красноярск"],
+      ["Набор","приём 2 водителя КРСК, 28.09"],["Увольнения","нет"]]} },
+
+  { id:"cs-terminals", group:"Клиентский сервис", name:"Клиентский сервис Сигир Терминалс", role:"Челядинова К.",
+    status:"reported",
+    body:[
+      {t:"row2", a:[
+        {t:"bullets", title:"Ключевые события прошлой недели", items:["Подали план поступлений на октябрь"]}
+      ], b:[
+        {t:"bullets", title:"Ключевые планы новой недели", items:[
+          "Обработка входящих и исходящих КП", "Текущая работа",
+          "Занимаемся закрытием сентября: выставляем счета, отрабатываем БДР, подписываем УПД с клиентами",
+          "Готовимся к ежегодной индексации — направить уведомление всем клиентам"]}
+      ]},
+      {t:"block", mt:26, title:"Метрики, достижения, показатели", body:[
+        {t:"statRow", stats:[["ПДЗ","35%",{kind:"good",text:"▼ было 60%"}]]},
+        {t:"text", cls:"tbl-caption", html:"Документооборот"},
+        {t:"bullets", tight:true, items:[
+          "Восстановление оригиналов документов — 53 документа к восстановлению",
+          "Подписано 44 ДС; на подписании 8 из 127 ДС по форс-мажору",
+          "Просроченных задач нет", "На согласовании — 3 ПР", "На подписании — 1 договор, подписаны 2 договора"]},
+        {t:"kv", mt:14, items:[["Отгружено","18 паллет"],["Остатки на складе","206 мешков · 86 паллет"]]},
+        {t:"kv", items:[["Отремонтировано КТК (пред. неделя)","4"],["В ремонте","2"]]}
+      ]}
+    ],
+    footer:{label:"Отдел — отпуска", notes:[["Старовойтова В.","21.09–06.10"],["Кулешова Е.","24.09–01.10"]]} },
+
+  { id:"cs-sl", name:"КС СЛ", role:"Клиентский сервис", status:"reported",
+    body:[
+      {t:"block", title:"Метрики, достижения, показатели", body:[
+        {t:"statRow", stats:[["ПДЗ","30,04%",{kind:"good",text:"▼ было 42,4%"}],
+          ["Просроченные задачи в ДО","212",{kind:"bad",text:"▲ было 169"}],
+          ["Закрыто перевозок КТК за неделю","110",{kind:"flat",text:"отправлено 61"}]]},
+        {t:"text", cls:"hero-chip", style:"margin-bottom:18px", html:"100% заявок отработано"},
+        {t:"text", cls:"tbl-caption", html:"Подписание ДС"},
+        {t:"statRow", stats:[["ЭПД — подготовлено 139","51",{kind:"good",text:"▲ было 32"}],
+          ["Форс-мажоры — подготовлено 98","43",{kind:"good",text:"▲ было 31"}]]},
+        {t:"text", cls:"tbl-caption", html:"ЭТрН, 21–27.09"},
+        {t:"bullets", tight:true, items:["На бумаге — 56 рейсов (они же ЭТрН)",
+          "ЭТрН — 99 (не завершено: 2 по Красноярску, 6 по Москве)"]}
+      ]},
+      {t:"block", title:"Ключевые планы новой недели", body:[
+        {t:"bullets", items:["Отправить 32 КТК — Красноярск, 1 КТК — Владивосток"]}
+      ]}
+    ],
+    footer:{label:"Отдел — отпуска / больничные", notes:[["Старовойтова Вероника","21.09–06.10"],
+      ["Соколова Ольга","22.09–09.10"],["Артемьева Елена","21.09–30.09"]]} },
+
+  { id:"sales", group:"Коммерция", name:"Отдел продаж — Экспорт / ВРП", role:"Капустин В. В.",
+    status:"reported",
+    body:[
+      {t:"row2", a:[
+        {t:"table", title:"ВРП по направлениям — сентябрь (план &gt; остаток) и октябрь (план)",
+          cols:["Направление","Сентябрь","Октябрь"], rightFrom:1,
+          rows:[["Москва — Красноярск","312 &gt; 18","150"],["Москва — Иркутск","0","0"],
+                ["Москва — Екатеринбург","35 &gt; 18","12"],["Москва — Новосибирск","2","0"],
+                ["Москва — Дальний Восток","0","0"],["Красноярск — ДВ (ПСЖВС)","5","5"],
+                ["Москва — Омск","0","0"],["СПб — Красноярск","0","0"]],
+          total:["Итого, контейнеров","план 354 / факт 303","план 167 / факт 0"]},
+        {t:"meterRow", mt:14, meters:[{label:"Исполнение плана сентября", val:"86%", pct:86}]}
+      ], b:[
+        {t:"taglist", title:"Экспорт — план сентября (поезда)", tags:[
+          "233EXPSL — УИ–ЗУ","237EXPSL — БЗХ–ЗБК","238EXPSL — БЗХ–ЗБК (горох)","239EXPSL — БЗХ–ЗУ",
+          "240EXPSL — Малая Вишера–ЗБК","241EXPSL — БЗХ–ЗБК","242EXPSL — Нигозеро–МС"]},
+        {t:"kv", mt:14, items:[["Под погрузкой","2 КП"],["Отправлено","5 КП"],["В разработке","0 КП"]]}
+      ]},
+      {t:"subcard", mt:16, title:"События недели", body:[{t:"row2", a:[
+        {t:"subgroup", title:"Квоты и заполнение поездов", items:[
+          "Заполнение поездов, продажа согласованных объёмов/квот: реализовано за неделю 55 контейнеров",
+          "Согласование доп. квот на COC (сентябрь) — согласовано 18 мест на COC",
+          "Работа над согласованием поездов и квот на октябрь"]},
+        {t:"subgroup", title:"Клиенты", items:[
+          "Работа по клиентской базе (сельхозпродукция) по Красноярску",
+          "Работа по вопросам отклонения ГУ-12 по Красноярску (горох)",
+          "Проработка и согласование КП с ЛДК 1",
+          "Расширение клиентской базы по Красноярску: АО «Май Брендс», Леман Про, Водолей"]}
+      ], b:[
+        {t:"subgroup", title:"ЭПД", items:["Подписание и тестирование ЭПЭ — итог 104 из 238 заявок"]},
+        {t:"subgroup", title:"Операторы, ставки, подсылы", items:[
+          "Работа с операторами по привлечению вагонов SOC на октябрь (ТС, СКЛ, РЖДБА, ВЭ)",
+          "Участие в тендерных процедурах: УЛК, ВЛП, Тайга, ЛузаЛес",
+          "Встреча с ТК (Красноярский филиал)"]}
+      ]}]},
+      {t:"subcard", mt:14, title:"Планы новой недели", body:[{t:"row2", a:[
+        {t:"subgroup", title:"Квоты и заполнение поездов", items:[
+          "План поездов октября, согласование квот на SOC и COC",
+          "Заполнение поездов, продажа согласованных объёмов/квот",
+          "Продажа клиентам поездов и согласование обеспечения составов на октябрь (БЗХ, ВСЖД)",
+          "Привлечение вагонов SOC на октябрь (СКЛ, РЖДБА, ВЭ) по Красноярску",
+          "Работа над реализацией контейнеров с Красноярска"]}
+      ], b:[
+        {t:"subgroup", title:"Клиенты", items:[
+          "Детальная работа по клиентам: Водолей, Холдинг Протэк, Красноярский водочный завод, ТГ Азия, СК Транс, РМС Черноземье, АО «Май Брендс»",
+          "Оперативные вопросы по проданным квотам", "Работа с потенциальной клиентской базой"]},
+        {t:"subgroup", title:"ЭПД", items:["Консультирование клиентов по ЭПД; заполнение и подписание ЭПЭ"]},
+        {t:"subgroup", title:"Логистика и передача дел", items:[
+          "Отправка КП с использованием сервиса ТК", "Передача дел Спиридоновой А."]}
+      ]}]},
+      {t:"subcard", mt:14, title:"Риски", body:[{t:"risk", html:"Нестабильная ситуация на рынке, влияние санкций"}]}
+    ],
+    footer:{label:"Отдел", stats:[["Отпуск","1"],["Командировки","0"],["Болеет","нет"],["Увольняются","0"],["Ещё не наняты","0"]]} },
+
+  { id:"contractors", name:"Отдел по работе с подрядчиками", role:"Коротчикова М. Е. · неделя 39",
+    status:"reported",
+    body:[
+      {t:"raw", html:
+        '<div class="block chart-card"><div class="chart-head"><h4>Динамика отправок ВРП 2026, направление Москва — Красноярск</h4></div>'+
+        '<svg class="linechart" viewBox="0 0 560 180" preserveAspectRatio="xMidYMid meet" style="max-width:480px">'+
+        '<line class="grid-line" x1="0" y1="20" x2="560" y2="20"></line>'+
+        '<line class="grid-line" x1="0" y1="160" x2="560" y2="160"></line>'+
+        '<polygon class="area" points="0,125.4 80,67.7 160,80.8 240,34.0 320,30.9 400,30.5 480,25.7 560,25.25 560,160 0,160"></polygon>'+
+        '<polyline class="line" points="0,125.4 80,67.7 160,80.8 240,34.0 320,30.9 400,30.5 480,25.7 560,25.25"></polyline>'+
+        '<circle class="dot" cx="0" cy="125.4" r="4"></circle><circle class="dot" cx="80" cy="67.7" r="4"></circle>'+
+        '<circle class="dot" cx="160" cy="80.8" r="4"></circle><circle class="dot" cx="240" cy="34.0" r="4"></circle>'+
+        '<circle class="dot" cx="320" cy="30.9" r="4"></circle><circle class="dot" cx="400" cy="30.5" r="4"></circle>'+
+        '<circle class="dot" cx="480" cy="25.7" r="4"></circle><circle class="dot end" cx="560" cy="25.25" r="5"></circle>'+
+        '<text class="end-label" x="500" y="16" text-anchor="start">308</text>'+
+        '<text x="0" y="174" text-anchor="start">янв</text><text x="80" y="174" text-anchor="middle">фев</text>'+
+        '<text x="160" y="174" text-anchor="middle">мар</text><text x="240" y="174" text-anchor="middle">апр</text>'+
+        '<text x="320" y="174" text-anchor="middle">май</text><text x="400" y="174" text-anchor="middle">июн</text>'+
+        '<text x="480" y="174" text-anchor="middle">июл</text><text x="555" y="174" text-anchor="end">авг</text></svg>'+
+        '<p style="font-size:.74rem;color:var(--muted);margin-top:6px">контейнеров/мес · 79 → 308, рост непрерывный с апреля</p></div>'},
+      {t:"cols3", items:[
+        [{t:"table", title:"Ожидание погрузки, сут.", cols:["Нед. 36","Нед. 37","Нед. 38","Нед. 39","Месяц"], allNum:true,
+          rows:[["18","9","12","14","13"]]}],
+        [{t:"table", title:"Использовано КТК, август", cols:["Канал","Всего","Привл.","Соб."], rightFrom:1,
+          rows:[["ВРП","194","190","4"],["Экспорт","178","178","0"],["Импорт","0","0","0"],["Аренда","134","0","134"]]}],
+        [{t:"table", title:"Использовано КТК, сентябрь по неделям", cols:["Неделя","ВРП","Экс.","Имп."], rightFrom:1,
+          rows:[["36","41","76","0"],["37","88","76","0"],["38","71","78","0"],["39","32","0","0"]],
+          total:["Всего","232","230","0"]}]
+      ]},
+      {t:"block", mt:16, body:[
+        {t:"text", cls:"tbl-caption", html:"ВРП, бронь / факт по направлениям — август (исполнение 100%) и сентябрь (исполнение 96%)"},
+        {t:"table", cols:["Направление","Авг · бронь SOC","Авг · бронь СОС","Авг · факт SOC","Авг · факт СОС",
+            "Сен · бронь SOC","Сен · бронь СОС","Сен · факт SOC","Сен · факт СОС"], rightFrom:1,
+          rows:[["Москва — Красноярск","220","88","220","88","224","97","213","93"],
+                ["Москва — Екатеринбург","—","26","—","26","—","30","—","30"],
+                ["Красноярск — ВЛД/ПСЖВС","—","13","—","13","—","2","—","2"],
+                ["Москва — Новосибирск","—","2","—","1","—","2","—","2"]],
+          total:["Итого","220","129","220","128","224","131","213","127"]}
+      ]},
+      {t:"cols3", mt:16, items:[
+        [{t:"text", cls:"block-title", html:"КТК в оперировании"},
+         {t:"kv", items:[["Итого","948"]]}, {t:"kv", items:[["Собственные","66"],["Привлечённые","882"]]}],
+        [{t:"table", title:"Наёмный автотранспорт, по неделям", cols:["","35","36","37","38","39"], rightFrom:1,
+          rows:[["Москва","21","5","7","6","6"],["Регионы","8","16","25","10","3"]],
+          total:["Итого","29","21","32","16","9"]}],
+        [{t:"text", cls:"block-title", html:"Собственные КТК в аренде"},
+         {t:"text", cls:"hero-figure num", style:"font-size:1.9rem", html:"134"},
+         {t:"text", style:"font-size:.82rem;color:var(--muted)", html:"все 134 — собственные контейнеры, переданные в аренду"}]
+      ]},
+      {t:"block", mt:16, title:"Новые контрагенты по сегментам", body:[
+        {t:"segments", pairs:[
+          ["Линии","СК Транзит СВ"],
+          ["Автотранспорт","Полезный актив, Ирктранс, Логистические решения, АМД Трейд"],
+          ["Контейнеры","RBS Logistics, Henan Huanhong Logistics"],
+          ["Операторы","Райнолоджистик, Трансконтейнер по Северной ж/д, Универсальный транспортный оператор, Восточный Экспресс"],
+          ["Терминалы","Единый Оператор, XMH, Рексервис, ИП Солянкин, ТСГ, КрасТрансКом, СИТ-Сибири-Сервис, ТК Магистраль, Контмэн"],
+          ["Субсидии","Zhejiang Sanling Supply Chain Management, Yiwu to Europe Logistics"],
+          ["Прочие","ЧОП Феликс"], ["Аренда КТК","Практика"]]}
+      ]},
+      {t:"row2", mt:8, a:[{t:"subcard", title:"Итоги прошедшей недели", body:[{t:"bullets", tight:true, items:[
+        "Обеспечение контейнерами ВРП/Экспорт/Импорт","Спец-тарифы в поездах ВРП","Тарифы операторов",
+        "Аренда собственных контейнеров","Наёмный автотранспорт, первая/последняя миля","Договоры с новыми контрагентами",
+        "Задачи в ДО","Первичные и бухгалтерские документы","Счета за доставку контейнеров","Дебиторская задолженность",
+        "Кредиторская задолженность СЛ","BPMN-процессы отдела, ввод ЭПД","«Поезд» и реестр поезда в УАТ",
+        "Заявка подрядчику/перевозчику в УАТ","Переход на ЭТрН, ЭЗЗ, ЭПЭ","ДС по ЭПД"]}]}],
+       b:[{t:"subcard", title:"Планы новой недели", body:[{t:"bullets", tight:true, items:[
+        "Актуализация информации о публичных поездах операторов во внутрироссийском сообщении: тарифы, свободные места",
+        "Обеспечение контейнерами объёмов текущей недели, подготовка к следующей",
+        "Актуализация расписания и мониторинг тарифов операторов в международном сообщении",
+        "Заключение договоров с подрядчиками в рамках расширения базы по востребованным направлениям",
+        "Получение, проверка и передача к учёту закрывающих документов",
+        "Актуализация кредиторской задолженности перед подрядчиками",
+        "Работа с ДЗ за возврат контейнеров в Китай",
+        "Актуализация BPMN «как есть»/«как будет» с учётом обновления функционала",
+        "АОП за отчётный период; ДС с КА по ЭПЭ; обновление RACI"]}]}]},
+      {t:"text", cls:"risk", style:"margin-top:14px;font-size:.78rem;padding:9px 14px;display:inline-block",
+        html:'<b style="font-weight:700">Риски, просьбы:</b> нестабильная ситуация на рынке (влияние санкций) · задержки оплат · курс валют ($, ¥)'}
+    ],
+    footer:{label:"Отдел", stats:[["Отпуск","0"],["Командировки","0"],["Болеет","0"],["Увольняются","0"],["Ещё не наняты","0"]]} },
+
+  { id:"commercial", name:"Коммерческий директор", status:"no_report" },
+
+  { id:"peo", group:"Финансы, право, учёт", name:"ПЭО", role:"Степанова Е.", status:"reported",
+    body:[{t:"row2", a:[
+      {t:"bullets", title:"Ключевые события прошлой недели", items:[
+        "Еженедельный сбор управленческой отчётности", "Работа с консолидированной базой 1С"]}
+    ], b:[
+      {t:"bullets", title:"Ключевые планы новой недели", items:[
+        "Подготовка форм для заполнения по отделам планов по Бюджету 2027", "Дашборд 2027"]}
+    ]}],
+    footer:{label:"Отдел", empty:"На этой неделе — без записей по отпускам, командировкам и найму."} },
+
+  { id:"legal", name:"Юридический отдел", status:"no_report" },
+  { id:"accounting", name:"Главный бухгалтер", status:"no_report" },
+
+  { id:"hr", group:"HR и IT", name:"HR", role:"Пласковицкая Екатерина", status:"reported",
+    body:[
+      {t:"block", title:"Открытые вакансии", body:[{t:"taglist", tags:["Оператор контейнерного погрузчика"]}]},
+      {t:"row2", a:[{t:"bullets", title:"Выходы на работу и найм", tight:true, items:[
+        '<b>Макарычева Марго</b> — менеджер по работе с клиентами ВРП (СПб), выход на прошлой неделе',
+        '<b>Максим Беляев</b> — логист (СПб), выход на прошлой неделе',
+        "2 сотрудника — водитель категории Е (Красноярск), с 28.09"]}
+      ], b:[{t:"bullets", title:"Увольнения", tight:true, items:['<b>Шишлевская Д.</b> — логист, 5.10']}]}],
+    extra:[
+      {t:"block", title:"Внутренний перевод", body:[{t:"bullets", tight:true, items:[
+        '<b>Гущина Ксения</b> — с менеджера КС СПб на менеджера отдела продаж (ВРП), с 01.10']}]},
+      {t:"block", title:"Текущие активности — подготовка к новогодним подаркам", body:[{t:"bullets", tight:true, items:[
+        "Детские новогодние подарки", "Календари, ежедневники, ручки"]}]}
+    ],
+    footer:{label:"Отдел — отсутствия", notes:[
+      ["Дарья Репина","отсутствует 21.09–16.10, замещает Каневская Анастасия (по ГПХ)"],
+      ["Ирина Богун","отсутствует 30.09–11.10, замещает Черноярова Ася"]]} },
+
+  { id:"it", name:"IT / IS", role:"Михаил Дударев", status:"reported",
+    body:[
+      {t:"statRow", stats:[["Скорость разработки","99%",null,"good"],["Просроченные Helpdesk","3"],
+        ["Простой сервисов за неделю","0",null,"good"],["Прогресс оптимизации","100%",null,"good"]]},
+      {t:"cols3", items:[
+        [{t:"text", cls:"block-title", html:"Максбот"},
+         {t:"text", cls:"status-tag done", html:"Сделали"},
+         {t:"bullets", tight:true, items:[
+          "Алармы по ЭПЭ и ЭЭР добавлены для Astral (были только СБИС)",
+          "Изучили интеграцию со СБИС — есть плюсы и минусы (например, нет прямого серверного автоподписания)",
+          "Аудит печатных форм, исправление неточностей", "Добавили слежение за «Сигир Групп»"]},
+         {t:"text", cls:"status-tag progress", style:"margin-top:12px", html:"Решаем"},
+         {t:"bullets", tight:true, items:["Дубликация водителей при входящем Т1 — тикет у Немыкина, ждём середины октября"]}],
+        [{t:"text", cls:"block-title", html:"1С"}, {t:"text", cls:"status-tag progress", html:"Решаем"},
+         {t:"bullets", tight:true, items:["Новая синхронизация — готова к запуску",
+          "Перебои с дислокацией — Игорь на финальной стадии (вышел из отпуска)",
+          "База МЭ — этап финального согласования мокапа"]}],
+        [{t:"text", cls:"block-title", html:"Прочее"},
+         {t:"bullets", tight:true, items:[
+          "Самостоятельно пофиксили ряд проблем в расширении Astral УАТ — всё работает, с недочётами, но без критики",
+          "Готовы перейти на Astral полностью, но есть пожелания по гибкости от КА и руководителей",
+          "Стратегически до конца 2026: работаем и в Astral, и в СБИС — ЭПЭ и ЭЭР; только в Astral — ЭТрН, ЭЗЗ, ЭПЛ"]}]
+      ]}
+    ],
+    footer:{label:"Отдел", empty:"На этой неделе — без записей по отпускам, командировкам и найму."} },
+
+  { id:"leadership", name:"Исполнительный директор · Генеральный директор", status:"no_report",
+    emptyText:"Заключительное слово — на собрании" },
+];
+
+const GROUP_TITLES = {};
+let lastGroup = null;
+DEPARTMENTS.forEach(d=>{ if(d.group) lastGroup = d.group; d._groupToShow = (d.group && d.group!==GROUP_TITLES._prev) ? d.group : null; });
+
+// -------- render engine --------
+function esc(s){ return String(s); } // контент уже доверенный (свой ввод), без экранирования спецсимволов разметки
+function tbl(b){
+  const rf = b.rightFrom ?? 1;
+  const thead = `<thead><tr>${b.cols.map((c,i)=>`<th${i>=rf||b.allNum?' class="num"':''}${b.wrapLast&&i===b.cols.length-1?' class="num wrap"':''}>${c}</th>`).join('')}</tr></thead>`;
+  const rowHtml = r => `<tr>${r.map((c,i)=>`<td${i>=rf||b.allNum?' class="num"':''}${b.wrapLast&&i===r.length-1?' class="num wrap"':''}>${c}</td>`).join('')}</tr>`;
+  const body = b.rows.map(rowHtml).join('') + (b.total?`<tr class="total">${rowHtml(b.total).replace('<tr>','').replace('</tr>','')}</tr>`:'');
+  const cap = b.title?`<p class="block-title">${b.title}</p>`:'';
+  return `${cap}<div class="tbl-wrap"><table class="tbl">${thead}<tbody>${body}</tbody></table></div>`;
+}
+function bulletsHtml(b){
+  const cap = b.title?`<p class="block-title">${b.title}</p>`:'';
+  return `<div class="block">${cap}<ul class="bullets${b.tight?' tight':''}">${b.items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
+}
+function meterRowHtml(b){
+  const meters = b.meters.map(m=>{
+    const trackCls = m.over ? 'meter-track over' : 'meter-track';
+    const fillCls = 'meter-fill' + (m.status?` status-${m.status}`:'');
+    return `<div class="meter"><span class="meter-label">${m.label}</span><span class="meter-val">${m.val}</span>`+
+      `<div class="${trackCls}"><div class="${fillCls}" style="width:${m.pct}%"></div></div></div>`;
+  }).join('');
+  return `<div class="meter-row"${b.mt?` style="margin-top:${b.mt}px"`:''}>${meters}</div>`;
+}
+function statRowHtml(b){
+  const stats = b.stats.map(([label,value,delta,color])=>{
+    const valStyle = color?` style="color:var(--${color})"`:'';
+    const deltaHtml = delta?`<p class="stat-delta ${delta.kind}">${delta.text}</p>`:'';
+    return `<div class="stat"><p class="stat-label">${label}</p><p class="stat-value num"${valStyle}>${value}</p>${deltaHtml}</div>`;
+  }).join('');
+  return `<div class="stat-row">${stats}</div>`;
+}
+function kvHtml(b){
+  const items = b.items.map(([l,v])=>`<div class="item">${l}<b>${v}</b></div>`).join('');
+  const style = [b.mt?`margin-top:${b.mt}px`:'', b.mb0?'margin-bottom:0':''].filter(Boolean).join(';');
+  return `<div class="kv"${style?` style="${style}"`:''}>${items}</div>`;
+}
+function taglistHtml(b){
+  const cap = b.title?`<p class="block-title">${b.title}</p>`:'';
+  return `${cap}<div class="taglist">${b.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
+}
+function segmentsHtml(b){
+  const cap = b.title?`<p class="block-title">${b.title}</p>`:'';
+  return `${cap}<dl class="segments">${b.pairs.map(([dt,dd])=>`<div><dt>${dt}</dt><dd>${dd}</dd></div>`).join('')}</dl>`;
+}
+function subgroupHtml(b){
+  return `<div class="subgroup"><p class="subgroup-title">${b.title}</p><ul class="bullets tight">${b.items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
+}
+function textHtml(b){
+  const style = b.style?` style="${b.style}"`:'';
+  const tag = b.cls==='block-title'||b.cls==='tbl-caption'||b.cls==='hero-chip'||b.cls&&b.cls.startsWith('status-tag')?'p':'p';
+  return `<${tag} class="${b.cls||''}"${style}>${b.html}</${tag}>`;
+}
+function riskHtml(b){ return `<p class="risk">${b.html}</p>`; }
+
+function renderBlock(b){
+  switch(b.t){
+    case "table": return tbl(b);
+    case "bullets": return bulletsHtml(b);
+    case "meterRow": return meterRowHtml(b);
+    case "statRow": return statRowHtml(b);
+    case "kv": return kvHtml(b);
+    case "taglist": return taglistHtml(b);
+    case "segments": return segmentsHtml(b);
+    case "subgroup": return subgroupHtml(b);
+    case "text": return textHtml(b);
+    case "risk": return riskHtml(b);
+    case "raw": return b.html;
+    case "row2": return `<div class="row2"${b.mt?` style="margin-top:${b.mt}px"`:''}><div>${b.a.map(renderBlock).join('')}</div><div>${b.b.map(renderBlock).join('')}</div></div>`;
+    case "cols3": return `<div class="cols3"${b.mt?` style="margin-top:${b.mt}px"`:''}>${b.items.map(col=>`<div>${col.map(renderBlock).join('')}</div>`).join('')}</div>`;
+    case "subcard": return `<div class="subcard"${b.mt?` style="margin-top:${b.mt}px"`:''}><h5>${b.title}</h5>${b.body.map(renderBlock).join('')}</div>`;
+    case "block": {
+      const cap = b.title?`<p class="block-title">${b.title}</p>`:'';
+      return `<div class="block"${b.mt?` style="margin-top:${b.mt}px"`:''}>${cap}${b.body.map(renderBlock).join('')}</div>`;
+    }
+    default: return '';
+  }
+}
+
+function renderFooter(f){
+  if(!f) return '';
+  if(f.empty) return `<div class="dept-footer"><p class="dept-footer-label">${f.label}</p><p class="dept-footer-empty">${f.empty}</p></div>`;
+  const stats = (f.stats||[]).map(([dt,dd])=>`<div class="dept-footer-stat"><p class="dt">${dt}</p><p class="dd">${dd}</p></div>`).join('');
+  const notes = (f.notes||[]).map(([b,text])=>`<p class="dept-footer-note"><b>${b}</b> — ${text}</p>`).join('');
+  return `<div class="dept-footer"><p class="dept-footer-label">${f.label}</p><div class="dept-footer-row">${stats}${notes}</div></div>`;
+}
+
+function renderDept(d){
+  const editBtn = EDITABLE_IDS.includes(d.id)
+    ? `<button type="button" class="edit-toggle" onclick="toggleEdit('${d.id}')">✏️ Редактировать</button>` : '';
+  if(d.status==="no_report"){
+    return `<div class="divider-dept" id="${d.id}"><h3>${d.name}${d.role?` — ${d.role}`:''}</h3>`+
+      `<span class="tag-empty">${d.emptyText||"Без письменного отчёта на этой неделе"}</span>${editBtn}</div>`+
+      (EDITABLE_IDS.includes(d.id)?renderEditPanel(d.id):'');
+  }
+  const body = (d.body||[]).map(renderBlock).join('') + (d.extra||[]).map(renderBlock).join('');
+  return `<section class="dept" id="${d.id}"><div class="dept-head"><h2>${d.name}</h2>`+
+    (d.role?`<p class="role">${d.role}</p>`:'')+editBtn+`</div>${body}${renderFooter(d.footer)}</section>`+
+    (EDITABLE_IDS.includes(d.id)?renderEditPanel(d.id):'');
+}
+
+function renderPage(){
+  document.getElementById("mh-title").textContent = `Неделя ${WEEK.weekNumber}`;
+  document.getElementById("mh-meta").innerHTML =
+    `<span><b>${WEEK.periodLabel}</b> — отчётный период</span>`+
+    `<span>Собрание <b>${WEEK.meetingLabel}</b></span>`+
+    `<span>Свод по <b>${WEEK.deptCount}</b> подразделениям</span>`;
+  document.getElementById("ft-text").textContent =
+    `Свод еженедельного собрания · неделя ${WEEK.weekNumber} · собрание ${WEEK.meetingLabel} · подготовлено из отчётов руководителей подразделений.`;
+
+  const nav = DEPARTMENTS.map(d=>`<a class="nav-link" href="#${d.id}">${d.navLabel||d.name}</a>`).join('');
+  document.getElementById("subnavWrap").innerHTML = nav;
+
+  let html = '', seenGroups = new Set();
+  DEPARTMENTS.forEach(d0=>{
+    const d = EDITABLE_IDS.includes(d0.id) ? mergeOverlay(d0) : d0;
+    if(d.group && !seenGroups.has(d.group)){
+      seenGroups.add(d.group);
+      html += `<p class="group-title"${seenGroups.size===1?' style="padding-top:44px"':''}>${d.group}</p>`;
+    }
+    html += renderDept(d);
+  });
+  document.getElementById("main").innerHTML = html;
+}
+
+// ===================== STAGE 2: db / user — запись по доверию =====================
+// Константа недели: пока фиксированная, авто-вычисление по календарю — задача Этапа 3.
+const WEEK_ID = "w39";
+// Пилотные отделы Этапа 2 — ровно те два, что проще всего по структуре (row2 из двух
+// буллет-листов [+ одна meterRow у инженера]). Остальные 14 остаются как в Этапе 1.
+const EDITABLE_IDS = ["peo", "engineering"];
+
+let DB = null, USER = null, CAN_WRITE = null;
+const overlay = {};  // deptId -> {status, values} из db (если уже кто-то сохранял)
+const owners = {};   // deptId -> ownerUserIds[] из db
+
+function currentValuesFor(id){
+  const ov = overlay[id];
+  if(ov && ov.values) return ov.values;
+  const dept = DEPARTMENTS.find(x=>x.id===id);
+  if(id==="peo"){
+    return { events: dept.body[0].a[0].items.slice(), plans: dept.body[0].b[0].items.slice() };
+  }
+  if(id==="engineering"){
+    const meters = dept.body[1].body[0].meters.map(m=>{
+      const parts = m.val.split("/").map(s=>Number(s.trim()));
+      return { label: m.label, num: parts[0], den: parts[1] };
+    });
+    return { events: dept.body[0].a[0].items.slice(), plans: dept.body[0].b[0].items.slice(), meters };
+  }
+  return {};
+}
+function currentStatusFor(id){
+  const ov = overlay[id];
+  if(ov && ov.status) return ov.status;
+  return DEPARTMENTS.find(x=>x.id===id).status;
+}
+function mergeOverlay(dept){
+  const values = currentValuesFor(dept.id);
+  const status = currentStatusFor(dept.id);
+  const body = JSON.parse(JSON.stringify(dept.body));
+  body[0].a[0].items = values.events;
+  body[0].b[0].items = values.plans;
+  if(dept.id==="engineering"){
+    body[1].body[0].meters = values.meters.map(m=>({
+      label: m.label, val: `${m.num} / ${m.den}`, pct: Math.round((m.num/m.den)*100) || 0 }));
+  }
+  return Object.assign({}, dept, { body, status });
+}
+
+function renderEditPanel(id){
+  const meterRows = id==="engineering" ? `
+    <div class="edit-row"><label>Документооборот — СЛ (сделано / всего)</label>
+      <div class="edit-pair"><input type="number" id="${id}-sl-num" min="0"> / <input type="number" id="${id}-sl-den" min="1"></div></div>
+    <div class="edit-row"><label>Документооборот — СТ (сделано / всего)</label>
+      <div class="edit-pair"><input type="number" id="${id}-st-num" min="0"> / <input type="number" id="${id}-st-den" min="1"></div></div>` : '';
+  return `<div class="edit-panel" id="edit-${id}" hidden>
+    <p class="edit-title">Редактирование раздела — Этап 2, пилот</p>
+    <div class="edit-row"><label>Статус недели</label>
+      <select id="${id}-status"><option value="reported">Есть отчёт</option><option value="no_report">Без отчёта на этой неделе</option></select></div>
+    <div class="edit-row"><label>Ключевые события прошлой недели (по одной в строке)</label>
+      <textarea id="${id}-events" rows="4"></textarea></div>
+    <div class="edit-row"><label>Ключевые планы новой недели (по одному в строке)</label>
+      <textarea id="${id}-plans" rows="4"></textarea></div>
+    ${meterRows}
+    <div class="edit-actions">
+      <button type="button" class="edit-btn primary" onclick="saveDept('${id}')">Сохранить</button>
+      <button type="button" class="edit-btn" onclick="claimOwner('${id}')">Это мой раздел</button>
+      <span class="edit-save-status" id="${id}-save-status"></span>
+    </div>
+  </div>`;
+}
+
+function fillEditForm(id){
+  const values = currentValuesFor(id);
+  document.getElementById(id+"-status").value = currentStatusFor(id);
+  document.getElementById(id+"-events").value = values.events.join("\n");
+  document.getElementById(id+"-plans").value = values.plans.join("\n");
+  if(id==="engineering"){
+    const [sl, st] = values.meters;
+    document.getElementById(id+"-sl-num").value = sl.num;
+    document.getElementById(id+"-sl-den").value = sl.den;
+    document.getElementById(id+"-st-num").value = st.num;
+    document.getElementById(id+"-st-den").value = st.den;
+  }
+}
+
+function toggleEdit(id){
+  const panel = document.getElementById("edit-"+id);
+  const willShow = panel.hidden;
+  panel.hidden = !willShow;
+  if(willShow) fillEditForm(id);
+}
+
+async function claimOwner(id){
+  const statusEl = document.getElementById(id+"-save-status");
+  if(!DB || !USER){ statusEl.textContent = "База данных недоступна в этом окне предпросмотра."; return; }
+  const uid = await USER.id();
+  if(!uid){ statusEl.textContent = "Нужно быть вошедшим в аккаунт Claude и соавтором артефакта."; return; }
+  statusEl.textContent = "Закрепляю…";
+  try{
+    const ref = DB.doc(`departments/${id}`);
+    const snap = await ref.get();
+    const cur = (snap.exists && snap.data().ownerUserIds) || [];
+    if(!cur.includes(uid)) cur.push(uid);
+    await ref.set({ ownerUserIds: cur });
+    owners[id] = cur;
+    statusEl.textContent = "Готово — раздел закреплён за вами ✓";
+  }catch(e){ statusEl.textContent = "Не получилось: "+(e && e.message || e); }
+}
+
+async function saveDept(id){
+  const statusEl = document.getElementById(id+"-save-status");
+  if(!DB){ statusEl.textContent = "База данных недоступна — изменения не сохранятся."; return; }
+  const status = document.getElementById(id+"-status").value;
+  const values = {
+    events: document.getElementById(id+"-events").value.split("\n").map(s=>s.trim()).filter(Boolean),
+    plans: document.getElementById(id+"-plans").value.split("\n").map(s=>s.trim()).filter(Boolean),
+  };
+  if(id==="engineering"){
+    values.meters = [
+      { label:"СЛ", num:Number(document.getElementById(id+"-sl-num").value), den:Number(document.getElementById(id+"-sl-den").value) },
+      { label:"СТ", num:Number(document.getElementById(id+"-st-num").value), den:Number(document.getElementById(id+"-st-den").value) },
+    ];
+  }
+  statusEl.textContent = "Сохраняю…";
+  try{
+    await DB.doc(`weeks/${WEEK_ID}/departments/${id}`).set({ status, values });
+    overlay[id] = { status, values };
+    statusEl.textContent = "Сохранено ✓";
+    renderPage();
+  }catch(e){
+    statusEl.textContent = "Ошибка: "+(e && e.message || e);
+  }
+}
+
+async function boot(){
+  try{ DB = await window.claude.use("db"); }catch(e){ DB = null; }
+  try{ USER = await window.claude.use("user"); }catch(e){ USER = null; }
+  if(USER){ try{ CAN_WRITE = await USER.can("data.write"); }catch(e){ CAN_WRITE = null; } }
+  if(DB){
+    for(const id of EDITABLE_IDS){
+      try{
+        const wSnap = await DB.doc(`weeks/${WEEK_ID}/departments/${id}`).get();
+        if(wSnap.exists) overlay[id] = wSnap.data();
+      }catch(e){ console.warn("db read (week) failed for", id, e); }
+      try{
+        const dSnap = await DB.doc(`departments/${id}`).get();
+        if(dSnap.exists) owners[id] = dSnap.data().ownerUserIds || [];
+      }catch(e){ console.warn("db read (owners) failed for", id, e); }
+    }
+  }
+  renderPage();
+}
+
+boot();
+
+// тот же обработчик горизонтального скролла колесом, что и в живом своде
+(function(){
+  var els = document.querySelectorAll('#subnavWrap, .tbl-wrap');
+  els.forEach(function(el){
+    el.addEventListener('wheel', function(e){
+      if (el.scrollWidth <= el.clientWidth) return;
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      el.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }, {passive:false});
+  });
+})();
+</script>
