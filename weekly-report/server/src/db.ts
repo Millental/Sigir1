@@ -6,15 +6,15 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import type { WeekRecord } from "./fields.js";
 
 const DATA_PATH = process.env.DATA_PATH || path.join(process.cwd(), "data.json");
 
 type DeptRecord = { name: string; token: string; editable: boolean };
-type WeekDeptRecord = { status: string; values: any; updatedAt: string };
 
 type Store = {
   departments: Record<string, DeptRecord>;
-  weeks: Record<string, Record<string, WeekDeptRecord>>;
+  weeks: Record<string, Record<string, WeekRecord & { updatedAt: string }>>;
 };
 
 function load(): Store {
@@ -45,16 +45,18 @@ export function getDepartmentById(id: string): DeptRecord | undefined {
   return store.departments[id];
 }
 
-export function getWeekDepartment(weekId: string, deptId: string): { status: string; values: any } | undefined {
+export function getWeekDepartment(weekId: string, deptId: string): WeekRecord | undefined {
   const store = load();
   const row = store.weeks[weekId]?.[deptId];
   if (!row) return undefined;
-  return { status: row.status, values: row.values };
+  const { updatedAt, ...rec } = row;
+  void updatedAt;
+  return rec;
 }
 
-export function saveWeekDepartment(weekId: string, deptId: string, status: string, values: any): void {
+export function saveWeekDepartment(weekId: string, deptId: string, record: WeekRecord): void {
   const store = load();
   if (!store.weeks[weekId]) store.weeks[weekId] = {};
-  store.weeks[weekId][deptId] = { status, values, updatedAt: new Date().toISOString() };
+  store.weeks[weekId][deptId] = { ...record, updatedAt: new Date().toISOString() };
   save(store);
 }

@@ -3,6 +3,9 @@
 // не содержит никаких ссылок/кнопок редактирования — токен-ссылка живёт только у того,
 // кому её выдали лично, и никогда не появляется в разметке, которую видят все.
 
+import { collectFields, renderFieldInput, renderFooterInputs, type WeekRecord } from "./fields.js";
+export type { WeekRecord };
+
 export type Block = any;
 export type Dept = any;
 
@@ -15,8 +18,13 @@ export const WEEK = {
 
 export const WEEK_ID = "w39";
 
-// Отделы, у которых уже есть форма редактирования (пилот Этапа 2).
-export const EDITABLE_IDS = ["peo", "engineering"];
+// Отделы, у которых есть реальный контент для редактирования (все, кроме пяти
+// "без письменного отчёта"-заглушек — для них редактировать пока нечего, см.
+// SESSION_LOG.md от 04.10.2026 (продолжение, тест "все 16 отделов локально")).
+export const EDITABLE_IDS = [
+  "perevozki", "terminal", "engineering", "operations", "cs-terminals",
+  "cs-sl", "sales", "contractors", "peo", "hr", "it",
+];
 
 export const DEPARTMENTS: Dept[] = [
   { id:"finance", group:"Финансы и коммерция", name:"Финансы", role:"Соколовская А.",
@@ -510,41 +518,25 @@ ${FONTS_HEAD}
 
 // -------- значения для редактируемых отделов (peo, engineering) --------
 
-export function defaultValuesFor(dept:Dept):any{
-  if(dept.id==="peo"){
-    return { events: dept.body[0].a[0].items.slice(), plans: dept.body[0].b[0].items.slice() };
-  }
-  if(dept.id==="engineering"){
-    const meters = dept.body[1].body[0].meters.map((m:any)=>{
-      const parts = m.val.split("/").map((s:string)=>Number(s.trim()));
-      return { label:m.label, num:parts[0], den:parts[1] };
-    });
-    return { events: dept.body[0].a[0].items.slice(), plans: dept.body[0].b[0].items.slice(), meters };
-  }
-  return {};
-}
-
-export function mergeOverlay(dept:Dept, overlay?:{status?:string, values?:any}):Dept{
-  const values = overlay?.values || defaultValuesFor(dept);
-  const status = overlay?.status || dept.status;
-  const body = JSON.parse(JSON.stringify(dept.body));
-  body[0].a[0].items = values.events;
-  body[0].b[0].items = values.plans;
-  if(dept.id==="engineering"){
-    body[1].body[0].meters = values.meters.map((m:any)=>({
-      label: m.label, val: `${m.num} / ${m.den}`, pct: Math.round((m.num/m.den)*100) || 0 }));
-  }
-  return Object.assign({}, dept, { body, status });
+export function mergeOverlay(dept:Dept, overlay?:WeekRecord):Dept{
+  if(!overlay) return dept;
+  return Object.assign({}, dept, {
+    status: overlay.status,
+    role: overlay.role ?? dept.role,
+    body: overlay.body,
+    extra: overlay.extra,
+    footer: overlay.footer,
+  });
 }
 
 // -------- страница редактирования по токену (без ссылок на другие разделы) --------
+// Generic-движок (fields.ts): один обход дерева body/extra находит каждый
+// редактируемый лист и строит под него текстовое поле; структура/заголовки
+// остаются из шаблона — редактируется только контент.
 
-export function renderEditFormHtml(dept:Dept, status:string, values:any, saved:boolean):string{
-  const meterRows = dept.id==="engineering" ? `
-    <div class="edit-row"><label>Документооборот — СЛ (сделано / всего)</label>
-      <div class="edit-pair"><input type="number" name="sl_num" min="0" value="${values.meters[0].num}"> / <input type="number" name="sl_den" min="1" value="${values.meters[0].den}"></div></div>
-    <div class="edit-row"><label>Документооборот — СТ (сделано / всего)</label>
-      <div class="edit-pair"><input type="number" name="st_num" min="0" value="${values.meters[1].num}"> / <input type="number" name="st_den" min="1" value="${values.meters[1].den}"></div></div>` : '';
+export function renderEditFormHtml(dept:Dept, rec:WeekRecord, saved:boolean):string{
+  const fieldsHtml = collectFields(rec).map(f => renderFieldInput(f.fieldId, f.block)).join('');
+  const footerHtml = renderFooterInputs(rec.footer);
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Редактирование — ${dept.name}</title>
@@ -553,19 +545,18 @@ ${FONTS_HEAD}
 </head><body>
 <p class="eyebrow">SIGIR · Свод недели</p>
 <h2 style="margin:8px 0 2px">${dept.name}</h2>
-<p class="role" style="margin-bottom:24px">${dept.role||''}</p>
+<p class="role" style="margin-bottom:24px">${rec.role||''}</p>
 ${saved?'<p style="color:var(--good);font-weight:600;margin-bottom:16px">Сохранено ✓ — изменения уже видны всем в своде.</p>':''}
 <form method="post" class="edit-panel" style="margin:0">
   <div class="edit-row"><label>Статус недели</label>
     <select name="status">
-      <option value="reported"${status==='reported'?' selected':''}>Есть отчёт</option>
-      <option value="no_report"${status==='no_report'?' selected':''}>Без отчёта на этой неделе</option>
+      <option value="reported"${rec.status==='reported'?' selected':''}>Есть отчёт</option>
+      <option value="no_report"${rec.status==='no_report'?' selected':''}>Без отчёта на этой неделе</option>
     </select></div>
-  <div class="edit-row"><label>Ключевые события прошлой недели (по одной в строке)</label>
-    <textarea name="events" rows="5">${values.events.join("\n")}</textarea></div>
-  <div class="edit-row"><label>Ключевые планы новой недели (по одному в строке)</label>
-    <textarea name="plans" rows="5">${values.plans.join("\n")}</textarea></div>
-  ${meterRows}
+  <div class="edit-row"><label>Кто отчитывается (ФИО/роль)</label>
+    <input type="text" name="role" value="${(rec.role||'').replace(/"/g,'&quot;')}"></div>
+  ${fieldsHtml}
+  ${footerHtml}
   <div class="edit-actions"><button type="submit" class="edit-btn primary">Сохранить</button></div>
 </form>
 </body></html>`;
