@@ -10,12 +10,17 @@ export type Block = any;
 export type Dept = any;
 
 export const WEEK = {
-  weekNumber: 39,
-  periodLabel: "21–27 сентября 2026",
-  meetingLabel: "28 сентября 2026",
+  weekNumber: 40,
+  periodLabel: "28 сентября — 4 октября 2026",
+  meetingLabel: "5 октября 2026",
   deptCount: 16,
 };
 
+// Внутренний ключ хранения в data.json ("w39") намеренно НЕ переименован вслед
+// за WEEK.weekNumber: часть отделов этой недели сохранена через форму под этим
+// ключом (см. getWeekDepartment/saveWeekDepartment в db.ts) — переименование
+// увело бы их обратно на устаревший шаблон. WEEK_ID — просто идентификатор
+// текущего хранимого снэпшота, не обязан совпадать с отображаемым номером недели.
 export const WEEK_ID = "w39";
 
 // Отделы, у которых есть реальный контент для редактирования (все, кроме пяти
