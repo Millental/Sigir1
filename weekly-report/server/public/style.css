@@ -373,3 +373,39 @@
   .edit-btn.primary{background:var(--brand-500); border-color:var(--brand-500); color:#fff}
   .edit-btn:hover{opacity:.88}
   .edit-save-status{font-size:.78rem; color:var(--muted)}
+  .edit-hint{font-size:.72rem; color:var(--muted); margin-top:4px}
+
+  /* ---------- Шаг 2 правка: drag-and-order + удаление полей/разделов ---------- */
+  .sortable-list{display:flex; flex-direction:column; gap:10px}
+  .sortable-item{border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:0}
+  .sortable-item.static{border:none; background:none; padding:0}
+  .sortable-item.dragging{opacity:.35}
+  .sortable-item.removed{opacity:.45}
+  .drag-row{display:flex; align-items:flex-start; gap:8px; padding:10px 10px 10px 6px}
+  .drag-handle{
+    cursor:grab; color:var(--muted); font-size:.95rem; line-height:1; padding:6px 2px;
+    user-select:none; touch-action:none; flex:0 0 auto;
+  }
+  .drag-handle:active{cursor:grabbing}
+  .drag-body{flex:1 1 auto; min-width:0}
+  .drag-body .edit-row{margin-bottom:0}
+  .remove-btn{
+    flex:0 0 auto; font-family:"Golos Text",sans-serif; font-size:.72rem; font-weight:600;
+    color:var(--serious); background:none; border:1px solid var(--line); border-radius:6px;
+    padding:4px 8px; cursor:pointer; white-space:nowrap;
+  }
+  .remove-btn:hover{background:var(--serious-bg)}
+  .sortable-item.removed .remove-btn{color:var(--good); border-color:var(--good)}
+  .sortable-item.removed .remove-btn:hover{background:var(--good-bg)}
+  .static-note{font-size:.76rem; color:var(--muted); font-style:italic; padding:4px 0}
+  .sortable-item.section{border-color:var(--brand-300); border-width:1.5px}
+  .section-row{background:var(--surface-2); border-radius:7px 7px 0 0; padding:8px 10px}
+  .section-title{flex:1 1 auto; font-size:.8rem; font-weight:700; color:var(--brand-600)}
+  :root[data-theme="dark"] .section-title{color:var(--brand-300)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .section-title{color:var(--brand-300)}}
+  .section-body{padding:12px 12px 12px 10px}
+  .sortable-item.removed .section-body, .sortable-item.removed .drag-body{opacity:.6; pointer-events:none}
+  .row2-wrap{display:flex; gap:16px; flex-wrap:wrap}
+  .row2-col{flex:1 1 260px; min-width:0}
+  .cols3-wrap{display:flex; gap:14px; flex-wrap:wrap}
+  .cols3-col{flex:1 1 180px; min-width:0}

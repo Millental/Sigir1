@@ -3,7 +3,7 @@
 // не содержит никаких ссылок/кнопок редактирования — токен-ссылка живёт только у того,
 // кому её выдали лично, и никогда не появляется в разметке, которую видят все.
 
-import { collectFields, renderFieldInput, renderFooterInputs, type WeekRecord } from "./fields.js";
+import { renderBodyEditor, renderFooterInputs, type WeekRecord } from "./fields.js";
 export type { WeekRecord };
 
 export type Block = any;
@@ -132,14 +132,14 @@ export const DEPARTMENTS: Dept[] = [
           "Готовимся к ежегодной индексации — направить уведомление всем клиентам"]}
       ]},
       {t:"block", mt:26, title:"Метрики, достижения, показатели", body:[
-        {t:"statRow", stats:[["ПДЗ","35%",{kind:"good",text:"▼ было 60%"}]]},
+        {t:"statRow", title:"Показатель ПДЗ", stats:[["ПДЗ","35%",{kind:"good",text:"▼ было 60%"}]]},
         {t:"text", cls:"tbl-caption", html:"Документооборот"},
         {t:"bullets", tight:true, items:[
           "Восстановление оригиналов документов — 53 документа к восстановлению",
           "Подписано 44 ДС; на подписании 8 из 127 ДС по форс-мажору",
           "Просроченных задач нет", "На согласовании — 3 ПР", "На подписании — 1 договор, подписаны 2 договора"]},
-        {t:"kv", mt:14, items:[["Отгружено","18 паллет"],["Остатки на складе","206 мешков · 86 паллет"]]},
-        {t:"kv", items:[["Отремонтировано КТК (пред. неделя)","4"],["В ремонте","2"]]}
+        {t:"kv", title:"Склад", mt:14, items:[["Отгружено","18 паллет"],["Остатки на складе","206 мешков · 86 паллет"]]},
+        {t:"kv", title:"Ремонт контейнеров", items:[["Отремонтировано КТК (пред. неделя)","4"],["В ремонте","2"]]}
       ]}
     ],
     footer:{label:"Отдел — отпуска", notes:[["Старовойтова В.","21.09–06.10"],["Кулешова Е.","24.09–01.10"]]} },
@@ -535,18 +535,19 @@ export function mergeOverlay(dept:Dept, overlay?:WeekRecord):Dept{
 // остаются из шаблона — редактируется только контент.
 
 export function renderEditFormHtml(dept:Dept, rec:WeekRecord, saved:boolean):string{
-  const fieldsHtml = collectFields(rec).map(f => renderFieldInput(f.fieldId, f.block)).join('');
+  const bodyHtml = renderBodyEditor(rec);
   const footerHtml = renderFooterInputs(rec.footer);
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Редактирование — ${dept.name}</title>
 ${FONTS_HEAD}
-<style>body{padding:32px 20px 60px;max-width:640px;margin:0 auto}</style>
+<style>body{padding:32px 20px 60px;max-width:720px;margin:0 auto}</style>
 </head><body>
 <p class="eyebrow">SIGIR · Свод недели</p>
 <h2 style="margin:8px 0 2px">${dept.name}</h2>
 <p class="role" style="margin-bottom:24px">${rec.role||''}</p>
 ${saved?'<p style="color:var(--good);font-weight:600;margin-bottom:16px">Сохранено ✓ — изменения уже видны всем в своде.</p>':''}
+<p class="edit-hint" style="margin-bottom:18px">Поля и целые разделы можно перетаскивать за значок ⠿⠿, чтобы изменить порядок. Кнопка ✕ убирает поле/раздел из свода на этой неделе (можно вернуть кнопкой ↺ до сохранения).</p>
 <form method="post" class="edit-panel" style="margin:0">
   <div class="edit-row"><label>Статус недели</label>
     <select name="status">
@@ -555,12 +556,75 @@ ${saved?'<p style="color:var(--good);font-weight:600;margin-bottom:16px">Сох�
     </select></div>
   <div class="edit-row"><label>Кто отчитывается (ФИО/роль)</label>
     <input type="text" name="role" value="${(rec.role||'').replace(/"/g,'&quot;')}"></div>
-  ${fieldsHtml}
+  ${bodyHtml}
   ${footerHtml}
   <div class="edit-actions"><button type="submit" class="edit-btn primary">Сохранить</button></div>
 </form>
+<script>${EDIT_SORT_SCRIPT}</script>
 </body></html>`;
 }
+
+// Ванильный drag-and-drop (без библиотек) + удаление/восстановление полей и разделов.
+// Перетаскивание ТОЛЬКО внутри одного .sortable-list (нельзя перетащить поле из одного
+// раздела в другой) — переставляет .sortable-item (включая статичные row2/cols3-обёртки
+// и раздел-блоки целиком), затем пересобирает order_<containerId> из текущего DOM-порядка.
+const EDIT_SORT_SCRIPT = `(function(){
+  function syncOrder(list){
+    var ids=[];
+    Array.prototype.forEach.call(list.children, function(el){
+      if(el.classList && el.classList.contains('sortable-item')) ids.push(el.dataset.id);
+    });
+    var input=list.querySelector(':scope > input.order-input');
+    if(input) input.value=ids.join(',');
+  }
+  function afterElement(list,y){
+    var items=Array.prototype.filter.call(list.children, function(el){
+      return el.classList && el.classList.contains('sortable-item') && !el.classList.contains('dragging');
+    });
+    var closest={offset:-Infinity, element:null};
+    items.forEach(function(child){
+      var box=child.getBoundingClientRect();
+      var offset=y-box.top-box.height/2;
+      if(offset<0 && offset>closest.offset){ closest={offset:offset, element:child}; }
+    });
+    return closest.element;
+  }
+  document.querySelectorAll('.sortable-item[draggable="true"]').forEach(function(item){
+    item.addEventListener('dragstart', function(){ item.classList.add('dragging'); });
+    item.addEventListener('dragend', function(){
+      item.classList.remove('dragging');
+      var list=item.closest('.sortable-list');
+      if(list) syncOrder(list);
+    });
+  });
+  document.querySelectorAll('.sortable-list').forEach(function(list){
+    list.addEventListener('dragover', function(e){
+      var dragging=list.querySelector('.sortable-item.dragging');
+      if(!dragging || dragging.closest('.sortable-list')!==list) return;
+      e.preventDefault();
+      var after=afterElement(list, e.clientY);
+      var anchor=list.querySelector(':scope > input.order-input');
+      if(after==null) list.insertBefore(dragging, anchor);
+      else list.insertBefore(dragging, after);
+    });
+  });
+  document.querySelectorAll('.remove-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var item=btn.closest('.sortable-item');
+      var removed=item.classList.toggle('removed');
+      var isSection=item.classList.contains('section');
+      btn.textContent=removed ? '↺ вернуть' : (isSection ? '✕ раздел' : '✕');
+      var hidden=item.querySelector(':scope > input.removed-input');
+      if(!hidden){
+        hidden=document.createElement('input');
+        hidden.type='hidden'; hidden.className='removed-input';
+        hidden.name='removed_'+btn.dataset.id;
+        item.appendChild(hidden);
+      }
+      hidden.value=removed?'1':'0';
+    });
+  });
+})();`;
 
 export function renderNotFoundHtml():string{
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Не найдено</title>${FONTS_HEAD}
