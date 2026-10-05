@@ -503,6 +503,11 @@ const SLIDE_FIT_SCRIPT = `(function(){
   var PRINT_MODE = /[?&]print=1/.test(location.search);
   var MIN_SCALE = PRINT_MODE ? 0 : 0.55;
   var PRINT_PAGE_H = 900; // px — держать в синхроне с @page size в style.css
+  var PRINT_PAGE_W = 1600; // px — держать в синхроне с @page size в style.css
+  var PRINT_WRAP_W = 1360; // ширина контента в печати (была 1180 на экране) —
+    // шире старой колонки, чтобы row2/cols3-раскладки не пустовали по бокам и не
+    // раздували высоту переносами строк; разница с PRINT_PAGE_W — запас на
+    // масштаб ВВЕРХ для разреженных отделов (см. ниже, scaleW).
   function fit(){
     var nav = document.querySelector('nav.subnav');
     var navH = (PRINT_MODE || !nav) ? 0 : nav.offsetHeight;
@@ -512,15 +517,31 @@ const SLIDE_FIT_SCRIPT = `(function(){
       var topPad = isTitle ? 0 : navH;
       var availH = vh - topPad;
       slide.style.paddingTop = topPad + 'px';
-      var inner = slide.querySelector('.slide-inner');
-      inner.style.transform = 'none';
-      var naturalH = inner.scrollHeight;
+      // Масштабируем САМ .wrap (не слайд-обёртку) — у него есть реальная
+      // натуральная ширина (max-width), от которой можно честно посчитать и
+      // scaleW. .slide-inner шириной всегда в 100% контейнера, у него нет
+      // осмысленной "натуральной ширины" для такого расчёта.
+      var wrap = slide.querySelector('.slide-inner > .wrap');
+      wrap.style.transform = 'none';
+      if(PRINT_MODE) wrap.style.maxWidth = PRINT_WRAP_W + 'px';
+      var naturalH = wrap.scrollHeight;
       var pad = 16;
-      var scale = Math.min(1, (availH - pad) / naturalH);
-      if(scale < MIN_SCALE) scale = MIN_SCALE;
-      if(scale < 1){
-        inner.style.transformOrigin = 'top center';
-        inner.style.transform = 'scale(' + scale + ')';
+      var scaleH = (availH - pad) / naturalH;
+      var scale;
+      if(PRINT_MODE){
+        var naturalW = wrap.offsetWidth;
+        var scaleW = (PRINT_PAGE_W - 20) / naturalW;
+        // в печати пола нет (обязаны влезать в 1 страницу) и потолка в 1× тоже
+        // нет — разреженный отдел (мало контента) заполняет страницу настолько,
+        // насколько позволяют ОБА измерения, не только высота.
+        scale = Math.min(scaleH, scaleW);
+      } else {
+        scale = Math.min(1, scaleH);
+        if(scale < MIN_SCALE) scale = MIN_SCALE;
+      }
+      if(scale !== 1){
+        wrap.style.transformOrigin = 'top center';
+        wrap.style.transform = 'scale(' + scale + ')';
       }
       if(PRINT_MODE){
         // печать: без исключений влезаем в одну страницу — высота строго

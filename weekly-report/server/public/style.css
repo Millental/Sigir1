@@ -112,7 +112,7 @@
     width:100%;
   }
   .slide--divider, .slide--title{align-items:center}
-  .slide-inner{transform-origin:top center; width:100%}
+  .slide-inner{width:100%}
   .slide .group-title{border-top:none; margin-top:0; padding-top:0}
 
   /* ---------- header: flat band, no mesh gradient, one thin rule ---------- */
@@ -368,6 +368,9 @@
     .slide-deck > .slide:last-child{page-break-after:auto; break-after:auto}
     section.dept{break-inside:avoid}
     body > footer{display:none}
+    /* подстраховка на случай, если по какой-то причине JS не выставит инлайн —
+       реальное значение держит PRINT_WRAP_W в SLIDE_FIT_SCRIPT, тут дублируем */
+    .wrap{max-width:1360px}
   }
 
   /* ---------- Этап 2: редактор (намеренно утилитарный, не часть ledger-языка) ---------- */
