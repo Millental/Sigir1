@@ -492,9 +492,12 @@ ${FONTS_HEAD}
 // иначе между слайдами при snap-прокрутке возникает пустой зазор.
 // .slide-inner масштабируется вниз (никогда вверх), чтобы уместить контент без
 // внутренней прокрутки. Если контенту отдела даже при предельном сжатии не хватает
-// места (очень плотные отделы вроде ОПРП/Продаж) — ниже MIN_SCALE не уходим, а даём
-// этому слайду собственную прокрутку (.slide--overflow), чтобы текст не становился
-// нечитаемым.
+// места (очень плотные отделы вроде Продаж) — ниже MIN_SCALE текст не ужимаем
+// (нечитаемо), а вместо вложенной прокрутки (которая раньше давала "двойной скролл" —
+// transform:scale уменьшает ТОЛЬКО отрисовку, но не scrollHeight, так что overflow:auto
+// открывал прокрутку на немасштабированный, куда больший размер) просто даём слайду
+// фактическую высоту = реальный визуальный размер после сжатия. Он получается чуть
+// выше экрана — и дальше едет общей прокруткой страницы, без вложенного скролл-бокса.
 const SLIDE_FIT_SCRIPT = `(function(){
   var MIN_SCALE = 0.55;
   function fit(){
@@ -505,22 +508,25 @@ const SLIDE_FIT_SCRIPT = `(function(){
       var isTitle = slide.classList.contains('slide--title');
       var topPad = isTitle ? 0 : navH;
       var availH = vh - topPad;
-      slide.style.height = vh + 'px';
       slide.style.paddingTop = topPad + 'px';
       var inner = slide.querySelector('.slide-inner');
       inner.style.transform = 'none';
-      slide.classList.remove('slide--overflow');
       var naturalH = inner.scrollHeight;
       var pad = 16;
       var scale = Math.min(1, (availH - pad) / naturalH);
-      if(scale < MIN_SCALE){
-        scale = MIN_SCALE;
-        slide.classList.add('slide--overflow');
-      }
+      if(scale < MIN_SCALE) scale = MIN_SCALE;
       if(scale < 1){
         inner.style.transformOrigin = 'top center';
         inner.style.transform = 'scale(' + scale + ')';
       }
+      var visualContentH = naturalH * scale;
+      var fullH = Math.ceil(visualContentH + topPad + pad);
+      var tooTall = fullH > vh;
+      slide.style.height = Math.max(vh, fullH) + 'px';
+      // mandatory scroll-snap "ловит" прокрутку на границе слайда, который выше
+      // экрана (он не укладывается ни в одну snap-точку целиком) — для таких
+      // слайдов snap отключаем, чтобы страница просто проскроллила их насквозь.
+      slide.style.scrollSnapAlign = tooTall ? 'none' : 'start';
     });
     document.body.classList.add('fitted');
   }

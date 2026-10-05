@@ -103,7 +103,7 @@
   @media (max-width:640px){.wrap{padding:0 18px}}
 
   /* ---------- Режим слайдов: титул + по одному отделу на экран, без прокрутки ---------- */
-  html{scroll-snap-type:y mandatory}
+  html{scroll-snap-type:y proximity}
   body:not(.fitted) .slide-deck, body:not(.fitted) header.masthead{visibility:hidden}
   .slide{
     scroll-snap-align:start; scroll-snap-stop:always;
@@ -111,7 +111,6 @@
     display:flex; align-items:flex-start; justify-content:center;
     width:100%;
   }
-  .slide.slide--overflow{overflow-y:auto; align-items:flex-start}
   .slide--divider, .slide--title{align-items:center}
   .slide-inner{transform-origin:top center; width:100%}
   .slide .group-title{border-top:none; margin-top:0; padding-top:0}
