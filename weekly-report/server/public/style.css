@@ -377,7 +377,8 @@
     section.dept{break-inside:avoid}
     body > footer{display:none}
     /* подстраховка на случай, если по какой-то причине JS не выставит инлайн —
-       реальное значение держит PRINT_WRAP_W в SLIDE_FIT_SCRIPT, тут дублируем */
+       реальные значения держит PRINT_WRAP_NARROW/WIDE в SLIDE_FIT_SCRIPT —
+       JS сам переключает между ними (узкая/широкая), тут просто не даём 0/auto */
     .wrap{max-width:1360px}
     /* headless --print-to-pdf рендерит страницу при узком эффективном вьюпорте
        (ниже 760/900px) независимо от --window-size и от реальной ширины .wrap —

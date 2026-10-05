@@ -504,10 +504,11 @@ const SLIDE_FIT_SCRIPT = `(function(){
   var MIN_SCALE = PRINT_MODE ? 0 : 0.55;
   var PRINT_PAGE_H = 900; // px — держать в синхроне с @page size в style.css
   var PRINT_PAGE_W = 1600; // px — держать в синхроне с @page size в style.css
-  var PRINT_WRAP_W = 1360; // ширина контента в печати (была 1180 на экране) —
-    // шире старой колонки, чтобы row2/cols3-раскладки не пустовали по бокам и не
-    // раздували высоту переносами строк; разница с PRINT_PAGE_W — запас на
-    // масштаб ВВЕРХ для разреженных отделов (см. ниже, scaleW).
+  var PRINT_WRAP_NARROW = 1360; // узкая колонка — для разреженных отделов (есть
+    // запас на масштаб ВВЕРХ без упора в ширину страницы, см. ветку scaleH>=1 ниже)
+  var PRINT_WRAP_WIDE = PRINT_PAGE_W - 20; // почти вся ширина страницы — для
+    // плотных отделов (которым и так нужно ужиматься по высоте, апскейл не нужен,
+    // а узкие поля по бокам при этом просто тратят место зря)
   function fit(){
     var nav = document.querySelector('nav.subnav');
     var navH = (PRINT_MODE || !nav) ? 0 : nav.offsetHeight;
@@ -516,27 +517,43 @@ const SLIDE_FIT_SCRIPT = `(function(){
       var isTitle = slide.classList.contains('slide--title');
       var topPad = isTitle ? 0 : navH;
       var availH = vh - topPad;
+      var pad = 16;
       slide.style.paddingTop = topPad + 'px';
+      // ширину слайда в печати тоже форсируем (как и высоту ниже) — иначе она
+      // просто наследует реальную ширину окна headless Chrome в момент выполнения
+      // скрипта (она НЕ обязана совпадать с @page), и scaleW считается от
+      // несуществующей величины — контент съезжает и обрезается сбоку.
+      if(PRINT_MODE) slide.style.width = PRINT_PAGE_W + 'px';
       // Масштабируем САМ .wrap (не слайд-обёртку) — у него есть реальная
       // натуральная ширина (max-width), от которой можно честно посчитать и
       // scaleW. .slide-inner шириной всегда в 100% контейнера, у него нет
       // осмысленной "натуральной ширины" для такого расчёта.
       var wrap = slide.querySelector('.slide-inner > .wrap');
       wrap.style.transform = 'none';
-      if(PRINT_MODE) wrap.style.maxWidth = PRINT_WRAP_W + 'px';
-      var naturalH = wrap.scrollHeight;
-      var pad = 16;
-      var scaleH = (availH - pad) / naturalH;
-      var scale;
+      var naturalH, scale;
       if(PRINT_MODE){
-        var naturalW = wrap.offsetWidth;
-        var scaleW = (PRINT_PAGE_W - 20) / naturalW;
-        // в печати пола нет (обязаны влезать в 1 страницу) и потолка в 1× тоже
-        // нет — разреженный отдел (мало контента) заполняет страницу настолько,
-        // насколько позволяют ОБА измерения, не только высота.
-        scale = Math.min(scaleH, scaleW);
+        // Двухпроходная подгонка. Сперва меряем в УЗКОЙ колонке — если по высоте
+        // контент и так помещается (scaleH>=1, отдел разреженный), оставляем
+        // узкую колонку и даём апскейл вверх по ширине (scaleW) — так заполняем
+        // страницу, а не тонем в пустоте с мелким текстом. Если нет (отдел
+        // плотный, и так жмём по высоте) — перемеряем уже в ШИРОКОЙ колонке:
+        // апскейл всё равно не нужен, а широкая колонка хотя бы убирает пустые
+        // поля по бокам и чуть снижает высоту за счёт меньшего переноса строк.
+        wrap.style.maxWidth = PRINT_WRAP_NARROW + 'px';
+        var narrowH = wrap.scrollHeight;
+        var narrowScaleH = (availH - pad) / narrowH;
+        if(narrowScaleH >= 1){
+          var scaleW = (PRINT_PAGE_W - 20) / PRINT_WRAP_NARROW;
+          naturalH = narrowH;
+          scale = Math.min(narrowScaleH, scaleW);
+        } else {
+          wrap.style.maxWidth = PRINT_WRAP_WIDE + 'px';
+          naturalH = wrap.scrollHeight;
+          scale = Math.min((availH - pad) / naturalH, (PRINT_PAGE_W - 20) / PRINT_WRAP_WIDE);
+        }
       } else {
-        scale = Math.min(1, scaleH);
+        naturalH = wrap.scrollHeight;
+        scale = Math.min(1, (availH - pad) / naturalH);
         if(scale < MIN_SCALE) scale = MIN_SCALE;
       }
       if(scale !== 1){
