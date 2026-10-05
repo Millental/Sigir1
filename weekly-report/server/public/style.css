@@ -353,22 +353,21 @@
   footer{padding:44px 0 56px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--line)}
   footer .wordmark{font-family:"Montserrat"; font-weight:800; letter-spacing:.06em; color:var(--orange-700); font-size:1rem; margin-bottom:6px}
 
+  /* Печатная страница — крупный "слайдовый" формат (для чтения с экрана/рассылки,
+     не под реальную бумагу); высота ДОЛЖНА совпадать с PRINT_PAGE_H в SLIDE_FIT_SCRIPT. */
+  @page{ size:1600px 900px; margin:0 }
   @media print{
-    /* Печать игнорирует экранный слайд-режим целиком: своя пагинация,
-       не JS-подгонка под window.innerHeight (на печати это размер страницы,
-       не экрана) — один .slide = один лист PDF через page-break, без scale/
-       scroll-snap/sticky-nav, которые имеют смысл только на экране.
-       !important нужен, чтобы перебить инлайновые style.* от SLIDE_FIT_SCRIPT. */
+    /* Печать НЕ отключает flex-вёрстку слайдов (.slide/.slide-inner) — только её,
+       центровку дивайдеров/титула даёт та же align-items-логика, что на экране.
+       Высоту/масштаб считает SLIDE_FIT_SCRIPT в print-ветке (?print=1 в URL,
+       см. server/src/pdf.ts) — без MIN_SCALE-пола, обязан влезть в одну страницу. */
     html{scroll-snap-type:none}
     nav.subnav{display:none}
     body:not(.fitted) .slide-deck, body:not(.fitted) header.masthead{visibility:visible}
-    .slide{
-      height:auto !important; padding-top:0 !important; overflow:visible !important;
-      display:block !important; page-break-after:always; break-after:page;
-    }
+    .slide{overflow:hidden; page-break-after:always; break-after:page}
     .slide-deck > .slide:last-child{page-break-after:auto; break-after:auto}
-    .slide-inner{transform:none !important; width:auto !important}
     section.dept{break-inside:avoid}
+    body > footer{display:none}
   }
 
   /* ---------- Этап 2: редактор (намеренно утилитарный, не часть ledger-языка) ---------- */

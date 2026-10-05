@@ -491,19 +491,22 @@ ${FONTS_HEAD}
 // (кроме титульного — под ним nav ещё не видна), а высота остаётся полной 100vh,
 // иначе между слайдами при snap-прокрутке возникает пустой зазор.
 // .slide-inner масштабируется вниз (никогда вверх), чтобы уместить контент без
-// внутренней прокрутки. Если контенту отдела даже при предельном сжатии не хватает
-// места (очень плотные отделы вроде Продаж) — ниже MIN_SCALE текст не ужимаем
-// (нечитаемо), а вместо вложенной прокрутки (которая раньше давала "двойной скролл" —
-// transform:scale уменьшает ТОЛЬКО отрисовку, но не scrollHeight, так что overflow:auto
-// открывал прокрутку на немасштабированный, куда больший размер) просто даём слайду
-// фактическую высоту = реальный визуальный размер после сжатия. Он получается чуть
-// выше экрана — и дальше едет общей прокруткой страницы, без вложенного скролл-бокса.
+// внутренней прокрутки. На экране есть MIN_SCALE (ниже — нечитаемо, слайд едет
+// общей прокруткой страницы вместо вложенного скролл-бокса — см. комментарий ниже
+// про transform:scale и scrollHeight). В ПЕЧАТНОМ режиме (?print=1 в URL — так
+// печатает headless Chrome, см. server/src/pdf.ts) пола нет вообще: каждый отдел
+// обязан влезть в одну страницу, поэтому там масштаб ужимается сколько потребуется,
+// а высота страницы берётся не из window.innerHeight (это не имеет отношения к
+// размеру печатной страницы), а из PRINT_PAGE_H — она должна совпадать с @page
+// size в print-CSS (style.css).
 const SLIDE_FIT_SCRIPT = `(function(){
-  var MIN_SCALE = 0.55;
+  var PRINT_MODE = /[?&]print=1/.test(location.search);
+  var MIN_SCALE = PRINT_MODE ? 0 : 0.55;
+  var PRINT_PAGE_H = 900; // px — держать в синхроне с @page size в style.css
   function fit(){
     var nav = document.querySelector('nav.subnav');
-    var navH = nav ? nav.offsetHeight : 0;
-    var vh = window.innerHeight;
+    var navH = (PRINT_MODE || !nav) ? 0 : nav.offsetHeight;
+    var vh = PRINT_MODE ? PRINT_PAGE_H : window.innerHeight;
     document.querySelectorAll('.slide').forEach(function(slide){
       var isTitle = slide.classList.contains('slide--title');
       var topPad = isTitle ? 0 : navH;
@@ -519,19 +522,25 @@ const SLIDE_FIT_SCRIPT = `(function(){
         inner.style.transformOrigin = 'top center';
         inner.style.transform = 'scale(' + scale + ')';
       }
-      var visualContentH = naturalH * scale;
-      var fullH = Math.ceil(visualContentH + topPad + pad);
-      var tooTall = fullH > vh;
-      slide.style.height = Math.max(vh, fullH) + 'px';
-      // mandatory scroll-snap "ловит" прокрутку на границе слайда, который выше
-      // экрана (он не укладывается ни в одну snap-точку целиком) — для таких
-      // слайдов snap отключаем, чтобы страница просто проскроллила их насквозь.
-      slide.style.scrollSnapAlign = tooTall ? 'none' : 'start';
+      if(PRINT_MODE){
+        // печать: без исключений влезаем в одну страницу — высота строго
+        // фиксирована, никакого натурального overflow на второй лист.
+        slide.style.height = PRINT_PAGE_H + 'px';
+      } else {
+        var visualContentH = naturalH * scale;
+        var fullH = Math.ceil(visualContentH + topPad + pad);
+        var tooTall = fullH > vh;
+        slide.style.height = Math.max(vh, fullH) + 'px';
+        // mandatory scroll-snap "ловит" прокрутку на границе слайда, который выше
+        // экрана (он не укладывается ни в одну snap-точку целиком) — для таких
+        // слайдов snap отключаем, чтобы страница просто проскроллила их насквозь.
+        slide.style.scrollSnapAlign = tooTall ? 'none' : 'start';
+      }
     });
     document.body.classList.add('fitted');
   }
   fit();
-  window.addEventListener('resize', fit);
+  if(!PRINT_MODE) window.addEventListener('resize', fit);
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   var els = document.querySelectorAll('#subnavWrap, .tbl-wrap');
   els.forEach(function(el){
