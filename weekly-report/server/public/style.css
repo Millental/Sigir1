@@ -198,9 +198,13 @@
   }
   section.dept:first-of-type + .group-title, .wrap > .group-title:first-child{border-top:none; margin-top:0}
 
-  .row2{display:grid; grid-template-columns:1fr 1fr; gap:30px; min-width:0}
-  .row2 > *{min-width:0}
-  @media (max-width:760px){.row2{grid-template-columns:1fr}}
+  /* flex, не grid — Chrome headless --print-to-pdf достоверно ломает grid-template-
+     columns внутри transform:scale()-контейнера (колонки схлопываются в одну,
+     хотя в интерактивной вкладке тот же grid считается верно); flex печатается
+     надёжно в обоих режимах. */
+  .row2{display:flex; gap:30px; min-width:0}
+  .row2 > *{flex:1 1 0; min-width:0}
+  @media (max-width:760px){.row2{flex-direction:column}}
 
   .block{margin-bottom:22px}
   .block:last-child{margin-bottom:0}
@@ -244,10 +248,12 @@
 
   /* meter: a thin line, color only when it means something */
   .meter-row{display:flex; flex-direction:column; gap:9px; margin-bottom:4px}
-  .meter{display:grid; grid-template-columns:1fr auto; gap:2px 12px; align-items:baseline}
-  .meter-label{font-size:.8rem; color:var(--ink-soft)}
-  .meter-val{font-size:.8rem; font-weight:700; color:var(--ink)}
-  .meter-track{grid-column:1/-1; height:3px; background:var(--line); overflow:hidden; position:relative}
+  /* flex, не grid — см. комментарий у .row2 (Chrome print ломает grid внутри
+     transform:scale()); track переносится на отдельную строку через flex-basis:100% */
+  .meter{display:flex; flex-wrap:wrap; column-gap:12px; row-gap:2px; align-items:baseline}
+  .meter-label{flex:1 1 auto; font-size:.8rem; color:var(--ink-soft)}
+  .meter-val{flex:0 0 auto; font-size:.8rem; font-weight:700; color:var(--ink)}
+  .meter-track{flex:1 0 100%; height:3px; background:var(--line); overflow:hidden; position:relative}
   .meter-fill{height:100%; background:var(--brand-500)}
   .meter-fill.status-serious{background:var(--serious)}
   .meter-fill.status-good{background:var(--good)}
@@ -319,10 +325,12 @@
   .kv .item{font-size:.82rem; color:var(--muted)}
   .kv .item b{display:block; font-size:1.08rem; color:var(--ink); font-weight:700}
 
-  .cols3{display:grid; grid-template-columns:repeat(3,1fr); gap:28px; min-width:0}
-  .cols3 > *{min-width:0; border-left:1px solid var(--line-soft); padding-left:18px}
+  /* flex, не grid — см. комментарий у .row2 (Chrome print ломает grid-template-
+     columns внутри transform:scale()) */
+  .cols3{display:flex; gap:28px; min-width:0}
+  .cols3 > *{flex:1 1 0; min-width:0; border-left:1px solid var(--line-soft); padding-left:18px}
   .cols3 > *:first-child{border-left:none; padding-left:0}
-  @media (max-width:900px){.cols3{grid-template-columns:1fr} .cols3 > *{border-left:none; padding-left:0; border-top:1px solid var(--line-soft); padding-top:14px} .cols3 > *:first-child{border-top:none; padding-top:0}}
+  @media (max-width:900px){.cols3{flex-direction:column} .cols3 > *{border-left:none; padding-left:0; border-top:1px solid var(--line-soft); padding-top:14px} .cols3 > *:first-child{border-top:none; padding-top:0}}
 
   .subgroup{margin-bottom:12px}
   .subgroup:last-child{margin-bottom:0}
@@ -371,6 +379,14 @@
     /* подстраховка на случай, если по какой-то причине JS не выставит инлайн —
        реальное значение держит PRINT_WRAP_W в SLIDE_FIT_SCRIPT, тут дублируем */
     .wrap{max-width:1360px}
+    /* headless --print-to-pdf рендерит страницу при узком эффективном вьюпорте
+       (ниже 760/900px) независимо от --window-size и от реальной ширины .wrap —
+       из-за этого @media(max-width:...) у .row2/.cols3 срабатывает и схлопывает
+       колонки в одну, хотя места полно. Форсируем многоколоночность обратно. */
+    .row2{flex-direction:row !important}
+    .cols3{flex-direction:row !important}
+    .cols3 > *{border-left:1px solid var(--line-soft) !important; border-top:none !important; padding-left:18px !important; padding-top:0 !important}
+    .cols3 > *:first-child{border-left:none !important; padding-left:0 !important}
   }
 
   /* ---------- Этап 2: редактор (намеренно утилитарный, не часть ledger-языка) ---------- */
