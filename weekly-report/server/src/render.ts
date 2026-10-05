@@ -433,11 +433,11 @@ function renderFooter(f:any):string{
 // всем, токен не должен в ней ни в каком виде проявляться.
 function renderDeptPublic(d:Dept):string{
   if(d.status==="no_report"){
-    return `<div class="divider-dept" id="${d.id}"><h3>${d.name}${d.role?` — ${d.role}`:''}</h3>`+
+    return `<div class="divider-dept"><h3>${d.name}${d.role?` — ${d.role}`:''}</h3>`+
       `<span class="tag-empty">${d.emptyText||"Без письменного отчёта на этой неделе"}</span></div>`;
   }
   const body = (d.body||[]).map(renderBlock).join('') + (d.extra||[]).map(renderBlock).join('');
-  return `<section class="dept" id="${d.id}"><div class="dept-head"><h2>${d.name}</h2>`+
+  return `<section class="dept"><div class="dept-head"><h2>${d.name}</h2>`+
     (d.role?`<p class="role">${d.role}</p>`:'')+`</div>${body}${renderFooter(d.footer)}</section>`;
 }
 
@@ -448,21 +448,24 @@ const FONTS_HEAD = `<link rel="preconnect" href="https://fonts.googleapis.com">
 
 export function renderPageHtml(week:typeof WEEK, departments:Dept[]):string{
   const nav = departments.map(d=>`<a class="nav-link" href="#${d.id}">${d.navLabel||d.name}</a>`).join('');
-  let main = '';
+  let slides = '';
   const seenGroups = new Set<string>();
   departments.forEach(d=>{
+    let groupHtml = '';
     if(d.group && !seenGroups.has(d.group)){
       seenGroups.add(d.group);
-      main += `<p class="group-title"${seenGroups.size===1?' style="padding-top:44px"':''}>${d.group}</p>`;
+      groupHtml = `<p class="group-title">${d.group}</p>`;
     }
-    main += renderDeptPublic(d);
+    const isDivider = d.status === "no_report";
+    slides += `<section class="slide${isDivider?' slide--divider':''}" id="${d.id}">`+
+      `<div class="slide-inner"><div class="wrap">${groupHtml}${renderDeptPublic(d)}</div></div></section>`;
   });
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Свод недели SIGIR</title>
 ${FONTS_HEAD}
 </head><body>
-<header class="masthead"><div class="wrap">
+<header class="masthead slide slide--title" id="_title"><div class="slide-inner"><div class="wrap">
   <p class="eyebrow">Еженедельное собрание · <span class="brand-mark">SIGIR</span></p>
   <h1>Неделя ${week.weekNumber}</h1>
   <div class="masthead-meta">
@@ -471,14 +474,59 @@ ${FONTS_HEAD}
     <span>Свод по <b>${week.deptCount}</b> подразделениям</span>
   </div>
   <div class="masthead-rule"></div>
-</div></header>
+</div></div></header>
 <nav class="subnav" aria-label="Разделы свода"><div class="wrap" id="subnavWrap">${nav}</div></nav>
-<main class="wrap">${main}</main>
+<main class="slide-deck">${slides}</main>
 <footer><div class="wrap"><p class="wordmark">SIGIR</p>
 <p>Свод еженедельного собрания · неделя ${week.weekNumber} · собрание ${week.meetingLabel} · подготовлено из отчётов руководителей подразделений.</p>
 </div></footer>
-<script>
-(function(){
+<script>${SLIDE_FIT_SCRIPT}</script>
+</body></html>`;
+}
+
+// Режим "слайды": каждый .slide (титул + по одному на отдел) занимает ровно 100vh —
+// ВАЖНО не уменьшать высоту слайда на высоту nav: sticky-nav не выталкивает
+// следующие элементы вниз при прокрутке, она просто ложится поверх верхней кромки
+// текущего слайда. Поэтому компенсация идёт через padding-top на самом слайде
+// (кроме титульного — под ним nav ещё не видна), а высота остаётся полной 100vh,
+// иначе между слайдами при snap-прокрутке возникает пустой зазор.
+// .slide-inner масштабируется вниз (никогда вверх), чтобы уместить контент без
+// внутренней прокрутки. Если контенту отдела даже при предельном сжатии не хватает
+// места (очень плотные отделы вроде ОПРП/Продаж) — ниже MIN_SCALE не уходим, а даём
+// этому слайду собственную прокрутку (.slide--overflow), чтобы текст не становился
+// нечитаемым.
+const SLIDE_FIT_SCRIPT = `(function(){
+  var MIN_SCALE = 0.55;
+  function fit(){
+    var nav = document.querySelector('nav.subnav');
+    var navH = nav ? nav.offsetHeight : 0;
+    var vh = window.innerHeight;
+    document.querySelectorAll('.slide').forEach(function(slide){
+      var isTitle = slide.classList.contains('slide--title');
+      var topPad = isTitle ? 0 : navH;
+      var availH = vh - topPad;
+      slide.style.height = vh + 'px';
+      slide.style.paddingTop = topPad + 'px';
+      var inner = slide.querySelector('.slide-inner');
+      inner.style.transform = 'none';
+      slide.classList.remove('slide--overflow');
+      var naturalH = inner.scrollHeight;
+      var pad = 16;
+      var scale = Math.min(1, (availH - pad) / naturalH);
+      if(scale < MIN_SCALE){
+        scale = MIN_SCALE;
+        slide.classList.add('slide--overflow');
+      }
+      if(scale < 1){
+        inner.style.transformOrigin = 'top center';
+        inner.style.transform = 'scale(' + scale + ')';
+      }
+    });
+    document.body.classList.add('fitted');
+  }
+  fit();
+  window.addEventListener('resize', fit);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   var els = document.querySelectorAll('#subnavWrap, .tbl-wrap');
   els.forEach(function(el){
     el.addEventListener('wheel', function(e){
@@ -488,10 +536,7 @@ ${FONTS_HEAD}
       e.preventDefault();
     }, {passive:false});
   });
-})();
-</script>
-</body></html>`;
-}
+})();`;
 
 // -------- значения для редактируемых отделов (peo, engineering) --------
 

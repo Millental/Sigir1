@@ -102,6 +102,20 @@
   .wrap{max-width:1180px; margin:0 auto; padding:0 32px}
   @media (max-width:640px){.wrap{padding:0 18px}}
 
+  /* ---------- Режим слайдов: титул + по одному отделу на экран, без прокрутки ---------- */
+  html{scroll-snap-type:y mandatory}
+  body:not(.fitted) .slide-deck, body:not(.fitted) header.masthead{visibility:hidden}
+  .slide{
+    scroll-snap-align:start; scroll-snap-stop:always;
+    box-sizing:border-box; overflow:hidden;
+    display:flex; align-items:flex-start; justify-content:center;
+    width:100%;
+  }
+  .slide.slide--overflow{overflow-y:auto; align-items:flex-start}
+  .slide--divider, .slide--title{align-items:center}
+  .slide-inner{transform-origin:top center; width:100%}
+  .slide .group-title{border-top:none; margin-top:0; padding-top:0}
+
   /* ---------- header: flat band, no mesh gradient, one thin rule ---------- */
   header.masthead{
     background:var(--brand-900);
@@ -322,15 +336,19 @@
   .status-tag.done{color:var(--good)}
   .status-tag.progress{color:var(--warning)}
 
-  /* empty-week placeholder: an honest dashed note, not a decorative card */
+  /* empty-week placeholder: a full slide of its own now — an honest, roomy note */
   .divider-dept{
-    margin:18px 0; padding:28px 0; border-top:1px dashed var(--line); border-bottom:1px dashed var(--line);
-    display:flex; flex-direction:column; align-items:flex-start; justify-content:center;
-    gap:8px; min-height:0;
+    padding:0; border:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:22px; text-align:center; min-height:0;
   }
-  .divider-dept h3{font-size:1.5rem; color:var(--ink-soft); font-weight:700}
+  .divider-dept::before{
+    content:""; width:64px; height:2px;
+    background:linear-gradient(90deg, var(--orange-500), var(--brand-500));
+  }
+  .divider-dept h3{font-size:clamp(2.2rem, 5vw, 3.6rem); color:var(--ink-soft); font-weight:800}
   .divider-dept .tag-empty{
-    font-size:.84rem; color:var(--muted); font-style:italic;
+    font-size:1.15rem; color:var(--muted); font-style:italic;
   }
 
   footer{padding:44px 0 56px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--line)}
