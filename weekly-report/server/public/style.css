@@ -354,7 +354,20 @@
   footer .wordmark{font-family:"Montserrat"; font-weight:800; letter-spacing:.06em; color:var(--orange-700); font-size:1rem; margin-bottom:6px}
 
   @media print{
-    nav.subnav{position:static}
+    /* Печать игнорирует экранный слайд-режим целиком: своя пагинация,
+       не JS-подгонка под window.innerHeight (на печати это размер страницы,
+       не экрана) — один .slide = один лист PDF через page-break, без scale/
+       scroll-snap/sticky-nav, которые имеют смысл только на экране.
+       !important нужен, чтобы перебить инлайновые style.* от SLIDE_FIT_SCRIPT. */
+    html{scroll-snap-type:none}
+    nav.subnav{display:none}
+    body:not(.fitted) .slide-deck, body:not(.fitted) header.masthead{visibility:visible}
+    .slide{
+      height:auto !important; padding-top:0 !important; overflow:visible !important;
+      display:block !important; page-break-after:always; break-after:page;
+    }
+    .slide-deck > .slide:last-child{page-break-after:auto; break-after:auto}
+    .slide-inner{transform:none !important; width:auto !important}
     section.dept{break-inside:avoid}
   }
 
